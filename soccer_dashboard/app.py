@@ -1839,6 +1839,8 @@ def main():
                                     ]
                                 )
                             },
+                            "xT_total": "{:.2f}",
+                            "xT_perAction": "{:.2f}",
                             "xG": "{:.2f}",
                             "xA": "{:.2f}",
                             "xGChain": "{:.2f}",
