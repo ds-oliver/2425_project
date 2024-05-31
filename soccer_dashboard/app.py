@@ -1545,7 +1545,7 @@ def main():
                     "position",
                     "starts",
                     "Apps",
-                    "minutes_played",
+                    # "minutes_played",
                     # "mins/start",
                     "goals",
                     "shots",
