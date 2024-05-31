@@ -13,6 +13,7 @@ from pandas.io.formats.style import Styler
 import os
 import altair as alt
 
+st.write(os.sys.executable)
 
 from config import (
     API_KEY,
