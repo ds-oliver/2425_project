@@ -52,3 +52,6 @@ dmypy.json
 
 # Docker
 *.pid
+
+# Jupyter Notebook
+*.ipynb

@@ -326,7 +326,7 @@ def feature_engineering(
 
     # df_players_merge["player_image"]
 
-    # Columns are: ['player', 'team', 'position', 'starts', 'Apps', 'minutes_played', 'mins_as_starter', 'goals', 'shots', 'xg', 'xa', 'xg_chain', 'xg_buildup', 'own_goals', 'mins/start', 'badge', 'team_summary', 'league', 'season', 'league_id', 'season_id', 'team_id', 'player_id', 'position_summary', 'matches', 'minutes', 'goals_summary', 'xg_summary', 'np_goals', 'np_xg', 'assists', 'xa_summary', 'shots_summary', 'key_passes', 'yellow_cards', 'red_cards', 'xg_chain_summary', 'xg_buildup_summary']
+    # Columns are: ['player_id', 'player', 'team', 'position', 'starts', 'Apps', 'minutes_played', 'mins_as_starter', 'goals', 'shots', 'xg', 'xa', 'xg_chain', 'xg_buildup', 'own_goals', '90s', 'mins/start', 'badge', 'player_image', 'player_summary', 'position_summary', 'xT_value', 'actions', 'apps', 'xT_perAction', 'minutes', 'goals_summary', 'xg_summary', 'np_goals', 'np_xg', 'assists', 'xa_summary', 'shots_summary', 'key_passes', 'yellow_cards', 'red_cards', 'xg_chain_summary', 'xg_buildup_summary', 'team_summary', 'league', 'league_id', 'season', 'season_id', 'team_id', 'matches']
     # Let's keep only the columns we need
     df_players_merge = df_players_merge[
         [
@@ -355,6 +355,8 @@ def feature_engineering(
             "yellow_cards",
             "red_cards",
             "90s",
+            "xT_total",
+
         ]
     ]
 
@@ -818,6 +820,63 @@ def get_data():
 # Get badges from API
 
 
+# @st.cache_data
+# def load_player_data(filter=None):
+#     try:
+#         # Determine the base path
+#         base_path = os.path.dirname(
+#             os.path.abspath(__file__)
+#         )  # Get the current script directory
+#         data_path = os.path.join(base_path, "../data")  # Local data path
+
+#         if not os.path.exists(
+#             data_path
+#         ):  # If not in local environment, use production path
+#             data_path = "/mnt/src/2425_project/data"
+
+#         # Construct the file paths using the data path
+#         df1 = pd.read_csv(os.path.join(data_path, "combined_data.csv"))
+#         df_players_matches = pd.read_csv(
+#             os.path.join(data_path, "players_matches_data.csv")
+#         )
+#         df_players_summary = pd.read_csv(
+#             os.path.join(data_path, "players_summary_data.csv")
+#         )
+#         df_shots = pd.read_csv(os.path.join(data_path, "shot_events.csv"))
+#         df_team_stats = pd.read_csv(os.path.join(data_path, "team_stats.csv"))
+#         df_player_wages = pd.read_csv(
+#             os.path.join(data_path, "premier_league_salaries.csv")
+#         )
+#         df_xT = pd.read_csv(os.path.join(data_path, "players_xT_data.csv"))
+
+#         # Print df_team_stats columns for debugging
+#         print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
+
+#         # Groupby team df_players_summary by team and season
+#         df_summary_teams = df_players_summary.groupby(
+#             ["team", "season_id"], as_index=False
+#         ).sum()
+
+#         # If filter is True, filter the df_player_wages data for the 2023 season
+#         if filter:
+#             df_player_wages = df_player_wages[df_player_wages["season"] == 2023]
+#             df_summary_teams = df_summary_teams[df_summary_teams["season_id"] == 2023]
+
+
+#         return (
+#             df1,
+#             df_players_matches,
+#             df_players_summary,
+#             df_summary_teams,
+#             df_shots,
+#             df_team_stats,
+#             df_player_wages,
+#             df_xT
+#         )
+#     except FileNotFoundError as e:
+#         print(f"FileNotFoundError caught: {e}")
+#         logging.exception("Exception occurred")
+#         return None, None, None, None, None, None, None, None
 @st.cache_data
 def load_player_data(filter=None):
     try:
@@ -840,6 +899,7 @@ def load_player_data(filter=None):
         df_player_wages = pd.read_csv(
             os.path.join(base_path, "premier_league_salaries.csv")
         )
+        df_xT = pd.read_csv(os.path.join(base_path, "players_xT_data.csv"))
 
         # Print df_team_stats columns for debugging
         print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
@@ -862,11 +922,12 @@ def load_player_data(filter=None):
             df_shots,
             df_team_stats,
             df_player_wages,
+            df_xT,
         )
     except FileNotFoundError as e:
         print(f"FileNotFoundError caught: {e}")
         logging.exception("Exception occurred")
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None
 
 
 def process_team_stats(df, df_team_summary, season_range, team_badges):
@@ -1459,7 +1520,7 @@ def main():
         st.header("Team Stats")
 
         # Load data
-        _, _, _, df_team_summary, _, df_team_stats, _ = load_player_data()
+        _, _, _, df_team_summary, _, df_team_stats, _, _ = load_player_data()
 
         print("Columns in df_team_summary:\n\n", list(df_team_summary.columns))
 
@@ -1494,7 +1555,16 @@ def main():
         st.header("Player Stats")
 
         # Load data
-        df1, df_players, df_players_summary, df_summary_teams, df_shots, df_team_stats, df_players_wages = load_player_data()
+        (
+            df1,
+            df_players,
+            df_players_summary,
+            df_summary_teams,
+            df_shots,
+            df_team_stats,
+            df_players_wages,
+            df_xT,
+        ) = load_player_data()
 
         with st.container(border=True):
             # Give user option to filter the data by season_id
@@ -1534,7 +1604,7 @@ def main():
 
             # Feature engineering
             df_players_matches, df_players_summary_merge = feature_engineering(
-                df_players, df_players_summary, team_badges, player_images
+                df_players, df_xT, team_badges, player_images
             )
 
             # df_players_matches["player_image"]
@@ -1851,7 +1921,7 @@ def main():
         st.header("Team Players")
 
         # Load data
-        _, _, _, _, _, _, df_players_wages = load_player_data(filter=True)
+        _, _, _, _, _, _, df_players_wages, _ = load_player_data(filter=True)
 
         # User selects a team from the dropdown
         team = st.selectbox(
@@ -1897,7 +1967,7 @@ def main():
         st.header("Scoring Trends")
 
         # Load data
-        _, _, _, _, _, df_team_stats, _ = load_player_data()
+        _, _, _, _, _, df_team_stats, _, _ = load_player_data()
 
         # Add a slider to filter by season_id
         season_ids = df_team_stats['season_id'].unique()
