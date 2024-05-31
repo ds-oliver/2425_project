@@ -356,6 +356,7 @@ def feature_engineering(
             "red_cards",
             "90s",
             "xT_total",
+            "xT_perAction",
 
         ]
     ]
@@ -412,6 +413,8 @@ def feature_engineering(
             "KPs/90",
             "Sh/90",
             "npxG/shot",
+            "xT_total",
+            "xT_perAction",
         ]
     ]
 
@@ -879,6 +882,7 @@ def get_data():
 #         return None, None, None, None, None, None, None, None
 
 def load_player_data(filter=None):
+    print("Inside load_player_data()")
     try:
         # Determine the base path
         if os.path.exists("data"):
@@ -1676,6 +1680,8 @@ def main():
                     "Sh/90",
                     "xg_chain",
                     "xg_buildup",
+                    "xT_total",
+                    "xT_perAction",
                 ]
             ]
             df_players_summary_merge.columns = [
@@ -1697,6 +1703,8 @@ def main():
                 "Sh/90",
                 "xGChain",
                 "xGBuildup",
+                "xT_total",
+                "xT_perAction",
             ]
 
             # df_players_summary_merge[["Img", "Player", "Team", "Pos"]]
