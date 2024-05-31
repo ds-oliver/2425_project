@@ -29,6 +29,9 @@ from config import (
     FenomenSans,
 )
 
+# setup logging
+logging.basicConfig(level=logging.INFO)
+
 # Define the path to the template directory and the template file name
 template_dir = "/Users/hogan/2425_project/soccer_dashboard/html"
 template_file = "template.tpl"
