@@ -805,17 +805,31 @@ def get_data():
 # we will get all strTeamBadge media from api here: https://www.thesportsdb.com/api/v1/json/60130162/lookup_all_teams.php?id=4328 ,id= and we will get the /tiny/ strTeamBadge such as https://www.thesportsdb.com/images/media/team/badge/uyhbfe1612467038.png/tiny
 # Get badges from API
 
+
 @st.cache_data
 def load_player_data(filter=None):
     try:
-        df1 = pd.read_csv("../data/combined_data.csv")
-        df_players_matches = pd.read_csv("../data/players_matches_data.csv")
-        df_players_summary = pd.read_csv("../data/players_summary_data.csv")
-        df_shots = pd.read_csv("../data/shot_events.csv")
-        df_team_stats = pd.read_csv("../data/team_stats.csv")
-        df_player_wages = pd.read_csv("../data/premier_league_salaries.csv")
+        # Determine the base path
+        if os.path.exists("data"):
+            base_path = "data"  # Local environment
+        else:
+            base_path = "/mnt/src/2425_project/data"  # Deployed environment
 
-        # print df_summary_teams columns
+        # Construct the file paths using the base path
+        df1 = pd.read_csv(os.path.join(base_path, "combined_data.csv"))
+        df_players_matches = pd.read_csv(
+            os.path.join(base_path, "players_matches_data.csv")
+        )
+        df_players_summary = pd.read_csv(
+            os.path.join(base_path, "players_summary_data.csv")
+        )
+        df_shots = pd.read_csv(os.path.join(base_path, "shot_events.csv"))
+        df_team_stats = pd.read_csv(os.path.join(base_path, "team_stats.csv"))
+        df_player_wages = pd.read_csv(
+            os.path.join(base_path, "premier_league_salaries.csv")
+        )
+
+        # Print df_team_stats columns for debugging
         print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
 
         # Groupby team df_players_summary by team and season
@@ -823,18 +837,22 @@ def load_player_data(filter=None):
             ["team", "season_id"], as_index=False
         ).sum()
 
-        # print df_summary_teams columns
-        # print(f"\nColumns in df_summary_teams:\n\n{df_summary_teams.columns}")
-
-        # If filter is True, filter the df_player_wages data for 2023 season
+        # If filter is True, filter the df_player_wages data for the 2023 season
         if filter:
             df_player_wages = df_player_wages[df_player_wages["season"] == 2023]
             df_summary_teams = df_summary_teams[df_summary_teams["season_id"] == 2023]
 
-        return df1, df_players_matches, df_players_summary, df_summary_teams, df_shots, df_team_stats, df_player_wages
-    except KeyError as e:
-        print("KeyError caught")
-        print("Columns in df_summary_teams: ", list(df_summary_teams.columns))
+        return (
+            df1,
+            df_players_matches,
+            df_players_summary,
+            df_summary_teams,
+            df_shots,
+            df_team_stats,
+            df_player_wages,
+        )
+    except FileNotFoundError as e:
+        print(f"FileNotFoundError caught: {e}")
         logging.exception("Exception occurred")
         return None, None, None, None, None, None, None
 
