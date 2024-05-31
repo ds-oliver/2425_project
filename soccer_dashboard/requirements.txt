@@ -271,7 +271,7 @@ requests-toolbelt==1.0.0
 restructuredtext-lint==1.4.0
 rich==13.3.1
 rsa==4.9
-scikit-learn==1.4.1.post1
+scikit-learn
 scipy==1.10.0
 ScraperFC==2.6.2
 Scrapy==2.8.0
