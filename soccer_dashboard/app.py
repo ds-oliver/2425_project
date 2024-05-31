@@ -369,6 +369,10 @@ def feature_engineering(
         df_players_merge["np_xg"] / df_players_merge["shots"]
     )
 
+    # create np:G-xG and A-xA columns   
+    df_players_merge["np:G-xG"] = df_players_merge["np_goals"] - df_players_merge["xg"]
+    df_players_merge["A-xA"] = df_players_merge["assists"] - df_players_merge["xa"]
+
     # Round to .3f
     df_players_merge["npxG/shot"] = df_players_merge["npxG/shot"].round(3)
 
@@ -388,8 +392,10 @@ def feature_engineering(
             "goals",
             "np_goals",
             "xg",
+            "np:G-xG",
             "assists",
             "xa",
+            "A-xA",
             "shots",
             "xg_chain",
             "xg_buildup",
@@ -1576,7 +1582,7 @@ def main():
 
             df_players_summary_merge = df_players_summary_merge[
                 [
-                    "player_image",
+                    # "player_image",
                     "badge",
                     "player",
                     "position",
@@ -1585,10 +1591,10 @@ def main():
                     "goals",
                     "np_goals",
                     "xg",
-                    # "np:G-xG",
+                    "np:G-xG",
                     "assists",
                     "xa",
-                    # "A-xA",
+                    "A-xA",
                     "npxG/shot",
                     "KPs/90",
                     "Sh/90",
@@ -1597,7 +1603,7 @@ def main():
                 ]
             ]
             df_players_summary_merge.columns = [
-                "Img",
+                # "Img",
                 "Team",
                 "Player",
                 "Pos",
@@ -1606,10 +1612,10 @@ def main():
                 "Gls",
                 "npGls",
                 "xG",
-                # "np:G-xG",
+                "np:G-xG",
                 "Assists",
                 "xA",
-                # "A-xA",
+                "A-xA",
                 "npxG/Shot",
                 "KPs/90",
                 "Sh/90",
