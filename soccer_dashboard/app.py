@@ -1265,10 +1265,10 @@ def highlight_categorical(val, color_mapping):
     return ""
 
 
-MyStyler = Styler.from_custom_template(
-    template_dir,
-    template_file,
-)
+# MyStyler = Styler.from_custom_template(
+#     template_dir,
+#     template_file,
+# )
 
 def main():
 
