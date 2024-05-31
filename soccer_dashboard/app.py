@@ -1572,6 +1572,8 @@ def main():
                 "xGBuildup",
             ]
 
+            df_players_summary_merge.columns.tolist()
+
             df_players_summary_merge = df_players_summary_merge[
                 [
                     "player_image",
