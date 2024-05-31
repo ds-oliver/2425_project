@@ -108,7 +108,7 @@ st.set_page_config(
 
 # st.write(os.sys.executable)
 
-# @st.cache_data
+@st.cache_data
 def get_team_to_id_mapping():
     url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookup_all_teams.php?id={EPL_ID}"
     response = requests.get(url)
@@ -120,7 +120,7 @@ def get_team_to_id_mapping():
 def get_id_from_team_name(team_to_id, team_name):
     return team_to_id.get(team_name, None)
 
-# @st.cache_data
+@st.cache_data
 def fetch_player_data(team_name, team_id):
     print("Inside fetch_player_data()")
     # Fetch player data
@@ -183,7 +183,7 @@ def fetch_player_data(team_name, team_id):
     return players
 
 
-# @st.cache_data
+@st.cache_data
 def get_badges():
     league_ids = [EPL_ID, EFL_CHAMPIONSHIP_ID, EFL_LEAGUE_ONE_ID]
     badges = {}
@@ -229,7 +229,7 @@ def get_badges():
 
     return badges, player_images_dict
 
-
+@st.cache_data
 def feature_engineering(
     df_players_matches, df_players_summary, team_badges, player_images_dict
 ):

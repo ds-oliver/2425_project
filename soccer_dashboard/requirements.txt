@@ -194,3 +194,4 @@ xgboost
 XlsxWriter
 yarl
 unidecode
+streamlit_extras
