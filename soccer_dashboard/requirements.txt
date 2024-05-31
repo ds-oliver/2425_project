@@ -193,3 +193,4 @@ wrapt
 xgboost
 XlsxWriter
 yarl
+unidecode
