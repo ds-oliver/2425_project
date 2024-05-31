@@ -337,7 +337,7 @@ def feature_engineering(
             "starts",
             "Apps",
             "minutes_played",
-            "mins/start",
+            # "mins/start",
             "goals",
             "assists",
             "xg",
