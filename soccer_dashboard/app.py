@@ -877,7 +877,7 @@ def get_data():
 #         print(f"FileNotFoundError caught: {e}")
 #         logging.exception("Exception occurred")
 #         return None, None, None, None, None, None, None, None
-@st.cache_data
+
 def load_player_data(filter=None):
     try:
         # Determine the base path
