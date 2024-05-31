@@ -79,7 +79,6 @@ favicon==0.7.0
 featuretools==1.26.0
 filelock==3.10.0
 Fiona==1.9.3
-firthlogist==0.5.0
 flake8==6.0.0
 flake8-docstrings==1.7.0
 flake8-rst-docstrings==0.3.0
