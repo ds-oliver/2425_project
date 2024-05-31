@@ -377,6 +377,10 @@ def feature_engineering(
 
     # Round to .3f
     df_players_merge["npxG/shot"] = df_players_merge["npxG/shot"].round(3)
+    df_players_merge["KPs/90"] = df_players_merge["KPs/90"].round(3)
+    df_players_merge["Sh/90"] = df_players_merge["Sh/90"].round(3)
+    df_players_merge["np:G-xG"] = df_players_merge["np:G-xG"].round(3)
+    df_players_merge["A-xA"] = df_players_merge["A-xA"].round(3)
 
     # Debugging print after rounding
     # print("npxG/shot values (after rounding): ", df_players_merge["npxG/shot"].values)
