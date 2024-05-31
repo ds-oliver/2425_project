@@ -1746,7 +1746,7 @@ def main():
                     df_players_summary_merge.style.format(
                         {
                             **{
-                                col: "{:.1f}"
+                                col: "{:.0f}"
                                 for col in df_players_summary_merge.columns.difference(
                                     [
                                         "Img",
