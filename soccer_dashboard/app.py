@@ -902,7 +902,7 @@ def load_player_data(filter=None):
         df_xT = pd.read_csv(os.path.join(base_path, "players_xT_data.csv"))
 
         # Print df_team_stats columns for debugging
-        print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
+        # print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
 
         # Groupby team df_players_summary by team and season
         df_summary_teams = df_players_summary.groupby(
