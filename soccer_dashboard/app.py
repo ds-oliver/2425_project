@@ -369,8 +369,10 @@ def feature_engineering(
         df_players_merge["np_xg"] / df_players_merge["shots"]
     )
 
-    # create np:G-xG and A-xA columns   
-    df_players_merge["np:G-xG"] = df_players_merge["np_goals"] - df_players_merge["xg"]
+    # create np:G-xG and A-xA columns
+    df_players_merge["np:G-xG"] = (
+        df_players_merge["np_goals"] - df_players_merge["np_xg"]
+    )
     df_players_merge["A-xA"] = df_players_merge["assists"] - df_players_merge["xa"]
 
     # Round to .3f
@@ -1755,8 +1757,6 @@ def main():
                                     ]
                                 )
                             },
-                            "np:G-xG": "{:.2f}",
-                            "A-xA": "{:.2f}",
                             "xG": "{:.2f}",
                             "xA": "{:.2f}",
                             "xGChain": "{:.2f}",
