@@ -384,7 +384,7 @@ def feature_engineering(
             "player",
             "position",
             "starts",
-            "mins/start",
+            # "mins/start",
             "goals",
             "np_goals",
             "xg",
