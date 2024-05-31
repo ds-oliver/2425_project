@@ -13,8 +13,6 @@ from pandas.io.formats.style import Styler
 import os
 import altair as alt
 
-st.write(os.sys.executable)
-
 from config import (
     API_KEY,
     EPL_ID,
@@ -106,6 +104,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# st.write(os.sys.executable)
 
 @st.cache_data
 def get_team_to_id_mapping():
