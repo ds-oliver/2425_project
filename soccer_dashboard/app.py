@@ -123,7 +123,7 @@ def get_team_to_id_mapping():
 def get_id_from_team_name(team_to_id, team_name):
     return team_to_id.get(team_name, None)
 
-@st.cache_data
+# @st.cache_data
 def fetch_player_data(team_name, team_id):
     print("Inside fetch_player_data()")
     # Fetch player data
@@ -881,12 +881,14 @@ def get_data():
 #         logging.exception("Exception occurred")
 #         return None, None, None, None, None, None, None, None
 
+
+@st.cache_data
 def load_player_data(filter=None):
-    print("Inside load_player_data()")
     try:
         # Determine the base path
-        if os.path.exists("data"):
-            base_path = "data"  # Local environment
+        current_path = os.path.dirname(os.path.abspath(__file__))
+        if os.path.exists(os.path.join(current_path, "../data")):
+            base_path = os.path.join(current_path, "../data")  # Local environment
         else:
             base_path = "/mnt/src/2425_project/data"  # Deployed environment
 
@@ -906,7 +908,7 @@ def load_player_data(filter=None):
         df_xT = pd.read_csv(os.path.join(base_path, "players_xT_data.csv"))
 
         # Print df_team_stats columns for debugging
-        # print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
+        print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
 
         # Groupby team df_players_summary by team and season
         df_summary_teams = df_players_summary.groupby(
