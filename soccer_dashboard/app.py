@@ -498,6 +498,7 @@ def feature_engineering(
     return df_players_matches, df_players_merge, df_situations
 
 
+@st.cache_data
 # define a function that adds badges to a df and returns a styled df with badges
 def add_badges(df, badges, playerwise=True):
     # Add badges to the df
@@ -685,7 +686,7 @@ def transform_shots_data(df_shots):
 
     return df_shots
 
-
+@st.cache_data
 def transform_shot_data(df_shots):
     # Calculate the total xG, the count of shots, and the count of unique games for each group
     grouped_data = (
@@ -805,7 +806,7 @@ def transform_shot_data(df_shots):
 
     return playerwise_result, teamwise_result
 
-
+@st.cache_data
 # plot home v away goals for all teams data using hexbin plot
 def plot_home_away_goals(df):
     # Size of the hexbins
@@ -1333,7 +1334,7 @@ def load_player_data(filter=None):
         logging.exception("Exception occurred")
         return None, None, None, None, None, None, None, None, None
 
-
+@st.cache_data
 def process_team_stats(df, df_team_summary, season_range, team_badges):
     print("Inside process_team_stats()")
 
