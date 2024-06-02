@@ -100,6 +100,11 @@ table_styles_blank_level2 = {
     "text-align": "center",
 }
 
+# PAGE_TITLE_LOCAL = "Soccer Dashboard - Local"
+# PAGE_TITLE_PROD = "Soccer Dashboard - Dev"
+
+# PAGE_ICON_LOCAL = ":caution:"
+# PAGE_ICON_PROD = ":exclamation:"
 
 # Set the page configuration
 st.set_page_config(
@@ -234,8 +239,10 @@ def get_badges():
 
 @st.cache_data
 def feature_engineering(
-    df_players_matches, df_players_summary, team_badges, player_images_dict
+    df_players_matches, df_players_summary, df_shots, team_badges, player_images_dict
 ):
+    print(f"Columns_in_df_shots: {list(df_shots.columns)}")
+
     # In df_players_matches if position is sub then we add assign False to the column is_starter
     df_players_matches["is_starter"] = df_players_matches["position"].apply(
         lambda x: False if "Sub" in x else True
@@ -323,6 +330,64 @@ def feature_engineering(
     # Print the columns and info of df_players_merge
     print(f"Columns_in_df_players_merge: {list(df_players_merge.columns)}")
     print(df_players_merge.info())
+
+    # groupby player, result, situation, body_part, zone_y, opponent_name, h_a, season_id, assist_player and count the number of shot_id, sum xg_shots
+    df_shots = df_shots.groupby(
+        [
+            "player_id",
+            "player",
+            "result",
+            "situation",
+            "body_part",
+            "zone_y",
+            "opponent_name",
+            "is_home_team",
+            "season_id",
+            "assist_player",
+        ],
+        as_index=False,
+    ).agg({"shot_id": "count", "xg": "sum"})
+    df_shots.rename(columns={"shot_id": "shots"}, inplace=True)
+
+    # Merge df_players_merge with df_shots on player_id
+    df_situations = pd.merge(
+        df_players_merge,
+        df_shots,
+        left_on="player_id",
+        right_on="player_id",
+        how="right",
+        suffixes=("", "_shots"),
+    )
+
+    # Print the columns and info of df_situations
+    print(f"Columns_in_df_situations: {list(df_situations.columns)}")
+    print(df_situations.info())
+
+    # Columns_in_df_situations: ['player_id', 'player', 'team', 'position', 'starts', 'Apps', 'minutes_played', 'mins_as_starter', 'goals', 'shots', 'xg', 'xa', 'xg_chain', 'xg_buildup', 'own_goals', '90s', 'mins/start', 'badge', 'player_image', 'player_summary', 'position_summary', 'xT_total', 'actions', 'apps', 'xT_perAction', 'minutes', 'goals_summary', 'xg_summary', 'np_goals', 'np_xg', 'assists', 'xa_summary', 'shots_summary', 'key_passes', 'yellow_cards', 'red_cards', 'xg_chain_summary', 'xg_buildup_summary', 'team_summary', 'league', 'league_id', 'season', 'season_id', 'team_id', 'matches', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots'], we want to keep: ['badge', 'player', 'position', '90s', 'season_id', 'team_id', 'matches', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots']
+    df_situations = df_situations[
+        ['badge', 'player', 'position', '90s', 'season_id', 'team_id', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots']
+    ]
+
+    # Rename columns in df_situations
+    df_situations.columns = [
+        "badge",
+        "player",
+        "pos",
+        "90s",
+        "season_id",
+        "team_id",
+        "player_shots",
+        "result",
+        "situation",
+        "body_part",
+        "zone_y",
+        "opponent",
+        "is_home_team",
+        "season_id_shots",
+        "assist_player",
+        "shots",
+        "xg",
+    ]
 
     # df_players_merge["player_image"]
 
@@ -430,7 +495,306 @@ def feature_engineering(
         ["np_goals", "xg"], ascending=False
     ).reset_index(drop=True)
 
-    return df_players_matches, df_players_merge
+    return df_players_matches, df_players_merge, df_situations
+
+
+# define a function that adds badges to a df and returns a styled df with badges
+def add_badges(df, badges, playerwise=True):
+    # Add badges to the df
+    df["badge"] = df["team"].map(badges)
+
+    # Create a copy of the df
+    df_badges = df.copy()
+
+    # Sort by "Open Play xG" if it exists in the DataFrame
+    if "Open Play xG" in df_badges.columns:
+        df_badges = df_badges.sort_values("Open Play xG", ascending=False)
+
+    # Determine the order of the columns
+    if playerwise:
+        columns_order = ["badge", "player", "position", "matches", "Open Play xG"] + [
+            col
+            for col in df_badges.columns
+            if col
+            not in ["badge", "player", "position", "team", "matches", "Open Play xG"]
+        ]
+    else:
+        columns_order = ["badge", "team", "Open Play xG"] + [
+            col
+            for col in df_badges.columns
+            if col not in ["badge", "team", "Open Play xG"]
+        ]
+
+    # Remove "matches" if it is not in the DataFrame
+    if "matches" not in df_badges.columns and "matches" in columns_order:
+        columns_order.remove("matches")
+
+    # Reorder the columns
+    df_badges = df_badges[columns_order]
+
+    # Format the badge column
+    df_badges["badge"] = df_badges["badge"].apply(
+        lambda x: f'<img src="{x}" style="width: 32px; height: 32px;">'
+    )
+
+    # Get numerical and categorical columns
+    numerical_columns = df_badges.select_dtypes(include="number").columns
+    categorical_columns = df_badges.select_dtypes(exclude="number").columns
+
+    # Create a styled df with badges
+    styled_df_badges = (
+        df_badges.style.set_properties(
+            subset=categorical_columns.difference(["badge", "position"]),
+            **{
+                "text-align": "left",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
+            },
+        )
+        .set_properties(
+            subset=numerical_columns,
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
+            },
+        )
+        .set_properties(
+            subset=["badge"],
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
+            },
+        )
+    )
+
+    if "position" in df_badges.columns:
+        styled_df_badges = styled_df_badges.set_properties(
+            subset=["position"],
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
+            },
+        )
+
+    styled_df_badges = (
+        styled_df_badges.set_table_styles(
+            [
+                {
+                    "selector": "th",
+                    "props": [
+                        ("font-family", fm_rubik),
+                        ("background-color", "#070d1d"),
+                        ("color", "floralwhite"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {
+                    "selector": "td:hover",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "gold"),
+                        ("border-color", "#ffbd6d"),
+                    ],
+                },
+                {
+                    "selector": ".blank.level0",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "floralwhite"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {
+                    "selector": ".blank.hover",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "black"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                    ],
+                },
+            ]
+        )
+        # Highlight the maximum value in each column
+        .highlight_max(
+            subset=numerical_columns,
+            props=highlight_max_props,
+        )
+        # Highlight the minimum value in each column
+        .highlight_min(
+            subset=numerical_columns,
+            props=highlight_min_props,
+        )
+        .format(subset=numerical_columns, formatter="{:.2f}")
+        # Format numerical columns with text gradient
+        .text_gradient(
+            subset=numerical_columns,
+            cmap="coolwarm",
+        )
+        .hide(axis="index")
+    )
+
+    return styled_df_badges
+
+
+def transform_shots_data(df_shots):
+    print(f"Columns_in_df_shots: {list(df_shots.columns)}")
+
+    # fill nans in assist_player with 'Self'
+    df_shots["assist_player"].fillna("Self", inplace=True)
+
+    # groupby player, result, situation, body_part, zone_y, opponent_name, h_a, season_id, assist_player and count the number of shot_id, sum xg_shots
+    df_shots = df_shots.groupby(
+        [
+            "player_id",
+            "player",
+            "result",
+            "situation",
+            "body_part",
+            "zone_y",
+            "opponent_name",
+            "is_home_team",
+            "season_id",
+            # "assist_player",
+        ],
+        as_index=False,
+    ).agg({"shot_id": "count", "xg": "sum"})
+    df_shots.rename(columns={"shot_id": "shots"}, inplace=True)
+
+    return df_shots
+
+
+def transform_shot_data(df_shots):
+    # Calculate the total xG, the count of shots, and the count of unique games for each group
+    grouped_data = (
+        df_shots.groupby(
+            ["player", "team", "position", "situation", "body_part", "zone_y"]
+        )
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate matches per player, team, and position
+    matches_data = (
+        df_shots.groupby(["player", "team", "position"])
+        .agg(matches=pd.NamedAgg(column="game", aggfunc="nunique"))
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    grouped_data["per_shot_xg"] = grouped_data["total_xg"] / grouped_data["shot_count"]
+
+    # Pivot the data for situations
+    situation_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    situation_pivot.columns = [f"{col} xG" for col in situation_pivot.columns]
+    situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    body_part_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    body_part_pivot.columns = [f"{col} xG" for col in body_part_pivot.columns]
+    body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    zone_y_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
+    zone_y_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on player, team, and position
+    playerwise_result = situation_pivot.merge(
+        body_part_pivot, on=["player", "team", "position"], how="outer"
+    )
+    playerwise_result = playerwise_result.merge(
+        zone_y_pivot, on=["player", "team", "position"], how="outer"
+    )
+
+    # Add matches to the playerwise_result
+    playerwise_result = playerwise_result.merge(
+        matches_data, on=["player", "team", "position"], how="left"
+    )
+
+    # Calculate teamwise data
+    team_grouped_data = (
+        df_shots.groupby(["team", "situation", "body_part", "zone_y"])
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    team_grouped_data["per_shot_xg"] = (
+        team_grouped_data["total_xg"] / team_grouped_data["shot_count"]
+    )
+
+    # Pivot the data for situations
+    team_situation_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_situation_pivot.columns = [f"{col} xG" for col in team_situation_pivot.columns]
+    team_situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    team_body_part_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_body_part_pivot.columns = [f"{col} xG" for col in team_body_part_pivot.columns]
+    team_body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    team_zone_y_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
+    team_zone_y_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on team
+    teamwise_result = team_situation_pivot.merge(
+        team_body_part_pivot, on="team", how="outer"
+    )
+    teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
+
+    return playerwise_result, teamwise_result
 
 
 # plot home v away goals for all teams data using hexbin plot
@@ -901,6 +1265,10 @@ def load_player_data(filter=None):
             os.path.join(base_path, "players_summary_data.csv")
         )
         df_shots = pd.read_csv(os.path.join(base_path, "shot_events.csv"))
+        print(f"Columns_in_df_shots:\n\n{df_shots.columns}")
+        # get unique 'situation' values
+        print(f"Unique_situation_values:\n\n{df_shots['situation'].unique()}")
+
         df_team_stats = pd.read_csv(os.path.join(base_path, "team_stats.csv"))
         df_player_wages = pd.read_csv(
             os.path.join(base_path, "premier_league_salaries.csv")
@@ -914,6 +1282,16 @@ def load_player_data(filter=None):
         df_summary_teams = df_players_summary.groupby(
             ["team", "season_id"], as_index=False
         ).sum()
+
+        # from players_matches_data create a dictionary that maps player_id to the most common position
+        player_positions = df_players_matches.groupby("player_id")["position"].agg(
+            lambda x: x.value_counts().index[0]
+        )
+
+        # Add position to the df_shots DataFrame
+        df_shots = df_shots.merge(
+            player_positions, left_on="player_id", right_index=True, how="left"
+        )
 
         # If filter is True, filter the df_player_wages data for the 2023 season
         if filter:
@@ -929,11 +1307,12 @@ def load_player_data(filter=None):
             df_team_stats,
             df_player_wages,
             df_xT,
+            player_positions
         )
     except FileNotFoundError as e:
         print(f"FileNotFoundError caught: {e}")
         logging.exception("Exception occurred")
-        return None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None
 
 
 def process_team_stats(df, df_team_summary, season_range, team_badges):
@@ -1416,7 +1795,7 @@ def main():
     )
 
     # Tab selection
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Standings", "Team Stats", "Player Stats", "Team Players", "Scoring Trends"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Standings", "Team Stats", "Player Stats", "Chance Creation", "Team Players", "Scoring Trends"])
 
     with tab1:
         # Custom title
@@ -1526,7 +1905,7 @@ def main():
         st.header("Team Stats")
 
         # Load data
-        _, _, _, df_team_summary, _, df_team_stats, _, _ = load_player_data()
+        _, _, _, df_team_summary, _, df_team_stats, _, _, _ = load_player_data()
 
         print("Columns in df_team_summary:\n\n", list(df_team_summary.columns))
 
@@ -1570,9 +1949,13 @@ def main():
             df_team_stats,
             df_players_wages,
             df_xT,
+            _
         ) = load_player_data()
 
         with st.container(border=True):
+            
+            all_season_ids = ["All"] + sorted(df_players["season_id"].unique(), reverse=True)
+
             # Give user option to filter the data by season_id
             season_id = st.selectbox(
                 "Select a season to filter the data",
@@ -1592,10 +1975,12 @@ def main():
             if team != "All":
                 df_players = df_players[df_players["team"] == team]
                 df_players_summary = df_players_summary[df_players_summary["team"] == team]
+                df_shots = df_shots[df_shots["team"] == team]
 
             # Filter the data by season_id
             df_players = df_players[df_players["season_id"] == season_id]
             df_players_summary = df_players_summary[df_players_summary["season_id"] == season_id]
+            df_shots = df_shots[df_shots["season_id"] == season_id]
 
             # Add "All" to the list of positions
             positions = ["All"] + sorted(df_players["position"].unique().tolist())
@@ -1609,8 +1994,8 @@ def main():
                 df_players = df_players[df_players["position"] == position]
 
             # Feature engineering
-            df_players_matches, df_players_summary_merge = feature_engineering(
-                df_players, df_xT, team_badges, player_images
+            df_players_matches, df_players_summary_merge, _ = feature_engineering(
+                df_players, df_xT, df_shots, team_badges, player_images
             )
 
             # df_players_matches["player_image"]
@@ -1927,13 +2312,97 @@ def main():
                 styled_df_players_summary.to_html(escape=False, index=False, bold_headers=True),
                 unsafe_allow_html=True
             )
-
+    
     with tab4:
-        print(f"With tab4:")
+        st.header("Chance Creation")
+
+        # Load data
+        _, _, _, _, df_shots, _, _, _, player_positions = load_player_data()
+
+        # add badge
+        # df_shots = add_badges(df_shots, team_badges)
+
+        # Add a slider to filter by season_id
+        season_ids = ["All"] + sorted(df_shots["season_id"].unique(), reverse=True)
+        default_season = 2023
+        season_range = st.select_slider(
+            "Select Season Range",
+            options=season_ids,
+            value=default_season,
+            key="chance_creation_season_range",
+        )
+
+        # Filter the data by the selected season range
+        df_shots = df_shots[df_shots["season_id"] == season_range]
+
+        # Add a slider to filter by team
+        teams = ["All"] + sorted(df_shots["team"].unique())
+        default_team = "All"
+
+        team = st.selectbox(
+            "Select a team", teams, index=teams.index(default_team), key="chance_creation_team"
+        )
+
+        if team != "All":
+            df_shots = df_shots[df_shots["team"] == team]
+
+        # Add a slider to filter by player position
+        positions = ["All"] + sorted(df_shots["position"].unique())
+        default_position = "All"
+
+        position = st.selectbox(
+            "Select a position", positions, index=positions.index(default_position), key="chance_creation_position"
+        )
+
+        if position != "All":
+            df_shots = df_shots[df_shots["position"] == position]
+
+        df_shots, df_shots_team = transform_shot_data(df_shots)
+
+        # Create a entry box for the minimum number of games
+        min_games = st.number_input(
+            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=10, key="min_games"
+        )
+
+        # Filter the data by the minimum number of games
+        df_shots = df_shots[df_shots["matches"] >= min_games]
+
+        # drop matches column
+        df_shots = df_shots.drop(columns=["matches"])
+
+        df_shots = add_badges(df_shots, team_badges, playerwise=True)
+
+        df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
+
+        # Add a team_wise radio button
+        team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
+
+        if team_wise == "Yes":
+            st.info(f"Table displays per shot stats for each team", icon="🚨")
+            st.markdown(
+                df_shots_team.to_html(escape=False, index=False, bold_headers=True),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info(f"Table displays per shot stats for each **player**", icon="🚨")
+
+            # Display the DataFrame
+            st.markdown(
+                df_shots.to_html(escape=False, index=False, bold_headers=True),
+                unsafe_allow_html=True,
+            )
+
+
+
+
+
+
+    with tab5:
+        print(f"With tab5:")
         st.header("Team Players")
 
         # Load data
-        _, _, _, _, _, _, df_players_wages, _ = load_player_data(filter=True)
+        _, _, _, _, _, _, df_players_wages, _, _ = load_player_data(filter=True)
 
         # User selects a team from the dropdown
         team = st.selectbox(
@@ -1950,7 +2419,7 @@ def main():
         # Fetch player data for the selected team
         players = fetch_player_data(team, team_id)
 
-        print(f"Players: {players}\n")
+        # print(f"Players: {players}\n")
 
         # Add a radio button to show player wages
         show_wages = st.radio("Show player wages", ["Yes", "No"])
@@ -1980,12 +2449,12 @@ def main():
         else:
             st.write("No player data available for the selected team.")
 
-    with tab5:
+    with tab6:
         # Display df_team_stats
         st.header("Scoring Trends")
 
         # Load data
-        _, _, _, _, _, df_team_stats, _, _ = load_player_data()
+        _, _, _, _, _, df_team_stats, _, _, _ = load_player_data()
 
         # Add a slider to filter by season_id
         season_ids = df_team_stats['season_id'].unique()
