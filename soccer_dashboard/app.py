@@ -1940,11 +1940,17 @@ def main():
             "Select a team", sorted(df["Team"].unique()), placeholder="Arsenal"
         )
 
+        print(f"Selected team: {team}\n")
+
         # get the team_id
         team_id = team_to_id_dict[team]
 
+        print(f"Selected team_id: {team_id}\n")
+
         # Fetch player data for the selected team
         players = fetch_player_data(team, team_id)
+
+        print(f"Players: {players}\n")
 
         # Add a radio button to show player wages
         show_wages = st.radio("Show player wages", ["Yes", "No"])
