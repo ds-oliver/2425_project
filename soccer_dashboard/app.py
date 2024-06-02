@@ -518,6 +518,8 @@ def add_badges(df, badges, playerwise=True):
             if col
             not in ["badge", "player", "position", "team", "matches", "Open Play xG"]
         ]
+        color_mapping = get_color_mapping(df["position"].unique())
+
     else:
         columns_order = ["badge", "team", "Open Play xG"] + [
             col
@@ -644,8 +646,15 @@ def add_badges(df, badges, playerwise=True):
             subset=numerical_columns,
             cmap="coolwarm",
         )
-        .hide(axis="index")
+        .hide(axis="index")   
     )
+
+    # if playerwise/position in columns applymap to color the cells
+    if playerwise:
+        styled_df_badges = styled_df_badges.applymap(
+            lambda x: f"background-color: {color_mapping[x]}", subset=["position"]
+        )
+
 
     return styled_df_badges
 
@@ -1283,10 +1292,20 @@ def load_player_data(filter=None):
             ["team", "season_id"], as_index=False
         ).sum()
 
-        # from players_matches_data create a dictionary that maps player_id to the most common position
-        player_positions = df_players_matches.groupby("player_id")["position"].agg(
-            lambda x: x.value_counts().index[0]
-        )
+        def get_most_common_position(positions):
+            # Filter out "Sub" positions
+            filtered_positions = positions[positions != "Sub"]
+            if filtered_positions.empty:
+                return "Sub"  # Return "Sub" if it is the only position
+            return filtered_positions.value_counts().index[0]
+
+        # Create a dictionary that maps player_id to the most common position
+        player_positions = df_players_matches.groupby("player_id")["position"].agg(get_most_common_position)
+
+        # # from players_matches_data create a dictionary that maps player_id to the most common position
+        # player_positions = df_players_matches.groupby("player_id")["position"].agg(
+        #     lambda x: x.value_counts().index[0]
+        # )
 
         # Add position to the df_shots DataFrame
         df_shots = df_shots.merge(
