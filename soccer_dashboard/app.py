@@ -128,7 +128,7 @@ def get_team_to_id_mapping():
 def get_id_from_team_name(team_to_id, team_name):
     return team_to_id.get(team_name, None)
 
-# @st.cache_data
+@st.cache_data
 def fetch_player_data(team_name, team_id):
     print("Inside fetch_player_data()")
     # Fetch player data
@@ -498,7 +498,7 @@ def feature_engineering(
     return df_players_matches, df_players_merge, df_situations
 
 
-@st.cache_data
+# @st.cache_data
 # define a function that adds badges to a df and returns a styled df with badges
 def add_badges(df, badges, playerwise=True):
     # Add badges to the df
@@ -1334,7 +1334,7 @@ def load_player_data(filter=None):
         logging.exception("Exception occurred")
         return None, None, None, None, None, None, None, None, None
 
-@st.cache_data
+# @st.cache_data
 def process_team_stats(df, df_team_summary, season_range, team_badges):
     print("Inside process_team_stats()")
 
