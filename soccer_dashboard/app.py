@@ -2379,9 +2379,12 @@ def main():
 
         df_shots, df_shots_team = transform_shot_data(df_shots)
 
+        # We will set the default_matches_value to 30% of the total number of matches
+        default_matches_value = int(0.3 * max(df_shots["matches"]))
+
         # Create a entry box for the minimum number of games
         min_games = st.number_input(
-            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=10, key="min_games"
+            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
         )
 
         # Filter the data by the minimum number of games
