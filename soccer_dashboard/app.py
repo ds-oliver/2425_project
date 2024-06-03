@@ -2348,13 +2348,18 @@ def main():
         season_range = st.select_slider(
             "Select Season Range",
             options=season_ids,
+            min_value=season_ids[0],
+            max_value=season_ids[-1],
             value=default_season,
             key="chance_creation_season_range",
         )
 
         # Filter the data by the selected season range
-        df_shots = df_shots[df_shots["season_id"] == season_range]
-
+        df_shots = df_shots[
+            (df_shots["season_id"] >= season_range[0])
+            & (df_shots["season_id"] <= season_range[1])
+        ]
+             
         # Add a slider to filter by team
         teams = ["All"] + sorted(df_shots["team"].unique())
         default_team = "All"
