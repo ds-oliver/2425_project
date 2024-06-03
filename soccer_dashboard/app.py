@@ -2347,12 +2347,11 @@ def main():
         default_season = 2023
         season_range = st.slider(
             "Select Season Range",
-            min_value=int(season_ids.min()),
-            max_value=int(season_ids.max()),
+            min_value=int(min(season_ids)),  # Use min() function here
+            max_value=int(max(season_ids)),  # Use max() function here
             value=(default_season, default_season),  # Set default range to the 2023 season
             key="chance_creation_season_range",
         )
-            
 
         # Filter the data by the selected season range
         df_shots = df_shots[
