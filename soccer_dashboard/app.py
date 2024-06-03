@@ -2345,7 +2345,7 @@ def main():
         # Add a slider to filter by season_id
         season_ids = ["All"] + sorted(df_shots["season_id"].unique(), reverse=True)
         default_season = 2023
-        season_range = st.select_slider(
+        season_range = st.slider(
             "Select Season Range",
             options=season_ids,
             min_value=season_ids[0],
