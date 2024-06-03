@@ -2343,7 +2343,7 @@ def main():
         # df_shots = add_badges(df_shots, team_badges)
 
         # Add a slider to filter by season_id
-        season_ids = ["All"] + sorted(df_shots["season_id"].unique(), reverse=True)
+        season_ids = sorted(df_shots["season_id"].unique(), reverse=True)
         default_season = 2023
         season_range = st.slider(
             "Select Season Range",
