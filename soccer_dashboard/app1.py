@@ -1275,18 +1275,11 @@ def load_player_data(filter=None):
             os.path.join(base_path, "players_summary_data.csv")
         )
         df_shots = pd.read_csv(os.path.join(base_path, "shot_events.csv"))
-        print(f"Columns_in_df_shots:\n\n{df_shots.columns}")
-        # get unique 'situation' values
-        print(f"Unique_situation_values:\n\n{df_shots['situation'].unique()}")
-
         df_team_stats = pd.read_csv(os.path.join(base_path, "team_stats.csv"))
         df_player_wages = pd.read_csv(
             os.path.join(base_path, "premier_league_salaries.csv")
         )
         df_xT = pd.read_csv(os.path.join(base_path, "players_xT_data.csv"))
-
-        # Print df_team_stats columns for debugging
-        print(f"Columns_in_df_team_stats:\n\n{df_team_stats.columns}")
 
         # Groupby team df_players_summary by team and season
         df_summary_teams = df_players_summary.groupby(
@@ -1294,19 +1287,13 @@ def load_player_data(filter=None):
         ).sum()
 
         def get_most_common_position(positions):
-            # Filter out "Sub" positions
             filtered_positions = positions[positions != "Sub"]
             if filtered_positions.empty:
-                return "Sub"  # Return "Sub" if it is the only position
+                return "Sub"
             return filtered_positions.value_counts().index[0]
 
         # Create a dictionary that maps player_id to the most common position
         player_positions = df_players_matches.groupby("player_id")["position"].agg(get_most_common_position)
-
-        # # from players_matches_data create a dictionary that maps player_id to the most common position
-        # player_positions = df_players_matches.groupby("player_id")["position"].agg(
-        #     lambda x: x.value_counts().index[0]
-        # )
 
         # Add position to the df_shots DataFrame
         df_shots = df_shots.merge(
@@ -1330,9 +1317,9 @@ def load_player_data(filter=None):
             player_positions
         )
     except FileNotFoundError as e:
-        print(f"FileNotFoundError caught: {e}")
         logging.exception("Exception occurred")
         return None, None, None, None, None, None, None, None, None
+
 
 # @st.cache_data
 def process_team_stats(df, df_team_summary, season_range, team_badges):
