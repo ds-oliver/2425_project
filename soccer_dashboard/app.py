@@ -27,6 +27,26 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+def highlight_max(s):
+    is_max = s == s.max()
+    return ["background-color: crimson" if v else "" for v in is_max]
+
+
+def get_color_mapping(unique_values):
+    colors = sns.color_palette("brg", len(unique_values))
+    color_mapping = {
+        val: mcolors.rgb2hex(colors[i]) for i, val in enumerate(unique_values)
+    }
+    return color_mapping
+
+
+def highlight_categorical(val, color_mapping):
+    if val in color_mapping:
+        return f"background-color: {color_mapping[val]}"
+    return ""
+
+
 # Caching API calls to minimize repeated requests
 @st.cache_data
 def get_team_to_id_mapping():
