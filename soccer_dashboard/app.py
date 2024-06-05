@@ -128,26 +128,22 @@ def get_team_to_id_mapping():
 def get_id_from_team_name(team_to_id, team_name):
     return team_to_id.get(team_name, None)
 
+
 @st.cache_data
 def fetch_player_data(team_name, team_id):
     print("Inside fetch_player_data()")
-    # Fetch player data
     url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/searchplayers.php?t={team_name}"
     response = requests.get(url)
     data = response.json()
     players = data.get("player", [])
 
-    # hit https://www.thesportsdb.com/api/v1/json/60130162/lookup_all_players.php?id={}
-    # to get all players for a team
     url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookup_all_players.php?id={team_id}"
     response = requests.get(url)
     data = response.json()
     players = data.get("player", [])
 
-    # Fetch honors and second team badge for each player
     for player in players:
         print(f"Fetched player: {player['strPlayer']}")
-        # Fetch honors
         honors_url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookuphonours.php?id={player['idPlayer']}"
         honors_response = requests.get(honors_url)
         honors_data = honors_response.json()
@@ -155,7 +151,6 @@ def fetch_player_data(team_name, team_id):
             len(honors_data.get("honours", [])) if honors_data.get("honours") else 0
         )
 
-        # Fetch second team badge if exists
         if player.get("idTeam2"):
             team2_url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookupteam.php?id={player['idTeam2']}"
             team2_response = requests.get(team2_url)
@@ -164,7 +159,6 @@ def fetch_player_data(team_name, team_id):
                 team2_badge = team2_data["teams"][0]["strTeamBadge"] + "/tiny"
                 player["Int"] = team2_badge
             else:
-                # Get the first team badge if the second team badge is not available
                 player["Int"] = (
                     f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookupteam.php?id={player['idTeam']}"
                 )
@@ -175,7 +169,6 @@ def fetch_player_data(team_name, team_id):
                 else:
                     player["Int"] = "\u20DD"
         else:
-            # Get the first team badge if the second team badge is not available
             player["Int"] = (
                 f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookupteam.php?id={player['idTeam']}"
             )
@@ -185,8 +178,6 @@ def fetch_player_data(team_name, team_id):
                 player["Int"] = team_data["teams"][0]["strTeamBadge"] + "/tiny"
             else:
                 player["Int"] = "\u20DD"
-
-        # print(player["Int"])
 
     return players
 
