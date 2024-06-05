@@ -229,10 +229,10 @@ def get_badges():
                     }
                 )
 
-    player_images_df = pd.DataFrame(player_images.items(), columns=["Player", "Player_Image"])
+    player_images_df = pd.DataFrame(
+        player_images.items(), columns=["Player", "Player_Image"]
+    )
     player_images_df["Player"] = player_images_df["Player"].apply(unidecode)
-
-    # conver back to dictionary
     player_images_dict = player_images_df.set_index("Player")["Player_Image"].to_dict()
 
     return badges, player_images_dict
