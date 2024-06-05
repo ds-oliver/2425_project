@@ -1831,7 +1831,7 @@ def main():
                         "props": [
                             ("background-color", "black"),
                             ("color", "floralwhite"),
-                            ("border-color": "#ffbd6d"),
+                            ("border-color", "#ffbd6d"),
                             ("text-align", "center"),
                         ],
                     },
@@ -1840,7 +1840,7 @@ def main():
                         "props": [
                             ("background-color", "black"),
                             ("color", "black"),
-                            ("border-color": "#ffbd6d"),
+                            ("border-color", "#ffbd6d"),
                             ("text-align", "center"),
                         ],
                     },
