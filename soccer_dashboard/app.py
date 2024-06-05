@@ -237,51 +237,268 @@ def get_badges():
 
     return badges, player_images_dict
 
-
 @st.cache_data
 def feature_engineering(
     df_players_matches, df_players_summary, df_shots, team_badges, player_images_dict
 ):
+    print(f"Columns_in_df_shots: {list(df_shots.columns)}")
+
+    # In df_players_matches if position is sub then we add assign False to the column is_starter
     df_players_matches["is_starter"] = df_players_matches["position"].apply(
         lambda x: False if "Sub" in x else True
     )
+
+    # In df_players_matches count unique player and assign True to Apps if minutes played is greater than 0
     df_players_matches["Apps"] = df_players_matches["minutes"].apply(
         lambda x: True if x > 0 else False
     )
+
+    # Create mins_as_starter column in df_players_matches where we get the minutes played as a starter
     df_players_matches["mins_as_starter"] = df_players_matches.apply(
         lambda row: row["minutes"] if row["is_starter"] else 0, axis=1
     )
+
+    # Create a 90s column in df_players_matches where we get the minutes played divided by 90
     df_players_matches["90s"] = df_players_matches["minutes"] / 90
 
+    # Groupby unique player and team combinations in df_players_matches, but first we create an aggregate dictionary to apply to the groupby
     agg_dict = {
-        "player": "first",
-        "team": "first",
-        "position": "first",
-        "is_starter": "sum",
+        "player": "first",  # get the first player name
+        "team": lambda x: x.mode()[0] if not x.mode().empty else np.nan,
+        "position": lambda x: x.mode()[0] if not x.mode().empty else np.nan,
+        "starts": "sum",
         "Apps": "sum",
+        "minutes_played": "sum",
         "mins_as_starter": "sum",
-        "minutes": "sum",
-        "90s": "sum",
         "goals": "sum",
         "shots": "sum",
         "xg": "sum",
         "xa": "sum",
         "xg_chain": "sum",
         "xg_buildup": "sum",
+        "own_goals": "sum",
+        "90s": "sum",
     }
 
-    df_players_summary_agg = (
-        df_players_matches.groupby("player").agg(agg_dict).reset_index()
+    # Rename to more meaningful column names, such as is_starter to starts
+    df_players_matches.rename(
+        columns={
+            "position": "position",
+            "is_starter": "starts",
+            "Apps": "Apps",
+            "minutes": "minutes_played",
+            "mins_as_starter": "mins_as_starter",
+            "goals": "goals",
+            "shots": "shots",
+            "own_goals": "own_goals",
+        },
+        inplace=True,
     )
 
-    df_players_summary_agg["badge"] = df_players_summary_agg["team"].map(team_badges)
-    df_players_summary_agg["player_image"] = df_players_summary_agg["player"].map(
-        player_images_dict
+    # Groupby unique player and team combinations in df_players
+    df_players_matches = df_players_matches.groupby(["player_id"], as_index=False).agg(
+        agg_dict
     )
-    return df_players_matches, df_players_summary_agg, df_shots
+
+    # Create mins/start column in df_players_matches where we get the average minutes played per start excluding subs
+    df_players_matches["mins/start"] = (
+        df_players_matches["mins_as_starter"] / df_players_matches["starts"]
+    )
+
+    # Round the values in df_players_matches to 1 decimal place for all numerical columns except xG, xA, xG Chain, xG Buildup
+    numerical_columns = df_players_matches.columns.difference(
+        ["player", "team", "position", "xg", "xa", "xg_chain", "xg_buildup"]
+    )
+    df_players_matches[numerical_columns] = df_players_matches[numerical_columns].apply(
+        np.ceil
+    )
+
+    # Add team badges to df_players
+    df_players_matches["badge"] = df_players_matches["team"].map(team_badges)
+    df_players_matches["player_image"] = df_players_matches["player"].map(player_images_dict)
+
+    # Merge df_players_matches with df_players_summary
+    df_players_merge = pd.merge(
+        df_players_matches,
+        df_players_summary,
+        left_on="player_id",
+        right_on="player_id",
+        how="left",
+        suffixes=("", "_summary"),
+    )
+
+    # Print the columns and info of df_players_merge
+    print(f"Columns_in_df_players_merge: {list(df_players_merge.columns)}")
+    print(df_players_merge.info())
+
+    # groupby player, result, situation, body_part, zone_y, opponent_name, h_a, season_id, assist_player and count the number of shot_id, sum xg_shots
+    df_shots = df_shots.groupby(
+        [
+            "player_id",
+            "player",
+            "result",
+            "situation",
+            "body_part",
+            "zone_y",
+            "opponent_name",
+            "is_home_team",
+            "season_id",
+            "assist_player",
+        ],
+        as_index=False,
+    ).agg({"shot_id": "count", "xg": "sum"})
+    df_shots.rename(columns={"shot_id": "shots"}, inplace=True)
+
+    # Merge df_players_merge with df_shots on player_id
+    df_situations = pd.merge(
+        df_players_merge,
+        df_shots,
+        left_on="player_id",
+        right_on="player_id",
+        how="right",
+        suffixes=("", "_shots"),
+    )
+
+    # Print the columns and info of df_situations
+    print(f"Columns_in_df_situations: {list(df_situations.columns)}")
+    print(df_situations.info())
+
+    # Columns_in_df_situations: ['player_id', 'player', 'team', 'position', 'starts', 'Apps', 'minutes_played', 'mins_as_starter', 'goals', 'shots', 'xg', 'xa', 'xg_chain', 'xg_buildup', 'own_goals', '90s', 'mins/start', 'badge', 'player_image', 'player_summary', 'position_summary', 'xT_total', 'actions', 'apps', 'xT_perAction', 'minutes', 'goals_summary', 'xg_summary', 'np_goals', 'np_xg', 'assists', 'xa_summary', 'shots_summary', 'key_passes', 'yellow_cards', 'red_cards', 'xg_chain_summary', 'xg_buildup_summary', 'team_summary', 'league', 'league_id', 'season', 'season_id', 'team_id', 'matches', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots'], we want to keep: ['badge', 'player', 'position', '90s', 'season_id', 'team_id', 'matches', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots']
+    df_situations = df_situations[
+        ['badge', 'player', 'position', '90s', 'season_id', 'team_id', 'player_shots', 'result', 'situation', 'body_part', 'zone_y', 'opponent_name', 'is_home_team', 'season_id_shots', 'assist_player', 'shots_shots', 'xg_shots']
+    ]
+
+    # Rename columns in df_situations
+    df_situations.columns = [
+        "badge",
+        "player",
+        "pos",
+        "90s",
+        "season_id",
+        "team_id",
+        "player_shots",
+        "result",
+        "situation",
+        "body_part",
+        "zone_y",
+        "opponent",
+        "is_home_team",
+        "season_id_shots",
+        "assist_player",
+        "shots",
+        "xg",
+    ]
+
+    # df_players_merge["player_image"]
+
+    # Columns are: ['player_id', 'player', 'team', 'position', 'starts', 'Apps', 'minutes_played', 'mins_as_starter', 'goals', 'shots', 'xg', 'xa', 'xg_chain', 'xg_buildup', 'own_goals', '90s', 'mins/start', 'badge', 'player_image', 'player_summary', 'position_summary', 'xT_value', 'actions', 'apps', 'xT_perAction', 'minutes', 'goals_summary', 'xg_summary', 'np_goals', 'np_xg', 'assists', 'xa_summary', 'shots_summary', 'key_passes', 'yellow_cards', 'red_cards', 'xg_chain_summary', 'xg_buildup_summary', 'team_summary', 'league', 'league_id', 'season', 'season_id', 'team_id', 'matches']
+    # Let's keep only the columns we need
+    df_players_merge = df_players_merge[
+        [
+            "badge",
+            "player_image",
+            "player",
+            "position",
+            "starts",
+            "Apps",
+            "minutes_played",
+            # "mins/start",
+            "goals",
+            "assists",
+            "xg",
+            "xa",
+            "shots",
+            "xg_chain",
+            "xg_buildup",
+            "season",
+            "season_id",
+            "position_summary",
+            "matches",
+            "np_goals",
+            "np_xg",
+            "key_passes",
+            "yellow_cards",
+            "red_cards",
+            "90s",
+            "xT_total",
+            "xT_perAction",
+
+        ]
+    ]
+
+    # Create per90 columns in df_players_merge for shots and key passes which we will rename as KPs/90 and Shots/90, then create npxG/shot
+    df_players_merge["KPs/90"] = (
+        df_players_merge["key_passes"] / df_players_merge["90s"]
+    )
+    df_players_merge["Sh/90"] = df_players_merge["shots"] / df_players_merge["90s"]
+
+    # Calculate npxG/shot
+    df_players_merge["npxG/shot"] = (
+        df_players_merge["np_xg"] / df_players_merge["shots"]
+    )
+
+    # create np:G-xG and A-xA columns
+    df_players_merge["np:G-xG"] = (
+        df_players_merge["np_goals"] - df_players_merge["np_xg"]
+    )
+    df_players_merge["A-xA"] = df_players_merge["assists"] - df_players_merge["xa"]
+
+    # Round to .3f
+    df_players_merge["npxG/shot"] = df_players_merge["npxG/shot"].round(3)
+    df_players_merge["KPs/90"] = df_players_merge["KPs/90"].round(3)
+    df_players_merge["Sh/90"] = df_players_merge["Sh/90"].round(3)
+    df_players_merge["np:G-xG"] = df_players_merge["np:G-xG"].round(3)
+    df_players_merge["A-xA"] = df_players_merge["A-xA"].round(3)
+
+    # Debugging print after rounding
+    # print("npxG/shot values (after rounding): ", df_players_merge["npxG/shot"].values)
+
+    # print(df_players_merge[["shots", "npxG/shot"]])
+
+    df_players_merge = df_players_merge[
+        [
+            "badge",
+            "player_image",
+            "player",
+            "position",
+            "starts",
+            # "mins/start",
+            "goals",
+            "np_goals",
+            "xg",
+            "np:G-xG",
+            "assists",
+            "xa",
+            "A-xA",
+            "shots",
+            "xg_chain",
+            "xg_buildup",
+            "season_id",
+            "90s",
+            "KPs/90",
+            "Sh/90",
+            "npxG/shot",
+            "xT_total",
+            "xT_perAction",
+        ]
+    ]
+
+    # df_players_merge["player_image"]
+
+    # Sort by goals
+    df_players_matches = df_players_matches.sort_values(
+        "goals", ascending=False
+    ).reset_index(drop=True)
+
+    # Sort by np_goals and xg
+    df_players_merge = df_players_merge.sort_values(
+        ["np_goals", "xg"], ascending=False
+    ).reset_index(drop=True)
+
+    return df_players_matches, df_players_merge, df_situations
 
 
-@st.cache_data
+# @st.cache_data
 # define a function that adds badges to a df and returns a styled df with badges
 def add_badges(df, badges, playerwise=True):
     # Add badges to the df
