@@ -5,6 +5,7 @@ import requests
 import numpy as np
 import altair as alt
 import logging
+import os
 
 from config import API_KEY, EPL_ID, EFL_CHAMPIONSHIP_ID, EFL_LEAGUE_ONE_ID, SEASON, fm_rubik, FenomenSans
 
