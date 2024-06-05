@@ -83,7 +83,7 @@ def load_player_data(filter=None):
     return df1, df_players_matches, df_players_summary, df_summary_teams, df_shots, df_team_stats, df_player_wages, df_xT
 
 
-@st.cache_data
+# @st.cache_data
 def process_team_stats(df, df_team_summary, season_range, team_badges):
     df["season_id"] = df["season_id"].astype(int)
     df_team_summary["team"] = df_team_summary["team"].astype(str)
