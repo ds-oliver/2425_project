@@ -254,31 +254,31 @@ def feature_engineering(
     df_players_matches["90s"] = df_players_matches["minutes"] / 90
 
     agg_dict = {
-        "team": "first",
-        "season_id": "first",
         "player": "first",
-        "league": "first",
-        "season": "first",
-        "league_id": "first",
-        "team_id": "first",
-        "player_id": "first",
+        "team": "first",
         "position": "first",
+        "is_starter": "sum",
+        "Apps": "sum",
+        "mins_as_starter": "sum",
+        "minutes": "sum",
+        "90s": "sum",
         "goals": "sum",
-        "xg": "sum",
         "shots": "sum",
+        "xg": "sum",
+        "xa": "sum",
         "xg_chain": "sum",
         "xg_buildup": "sum",
     }
 
-    df_players_summary_merge = (
+    df_players_summary_agg = (
         df_players_matches.groupby("player").agg(agg_dict).reset_index()
     )
 
-    df_players_summary_merge["badge"] = df_players_summary_merge["team"].map(team_badges)
-    df_players_summary_merge["player_image"] = df_players_summary_merge["player"].map(
+    df_players_summary_agg["badge"] = df_players_summary_agg["team"].map(team_badges)
+    df_players_summary_agg["player_image"] = df_players_summary_agg["player"].map(
         player_images_dict
     )
-    return df_players_matches, df_players_summary_merge, df_shots
+    return df_players_matches, df_players_summary_agg, df_shots
 
 
 @st.cache_data
