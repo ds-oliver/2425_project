@@ -265,12 +265,7 @@ def feature_engineering(
         "position": "first",
         "goals": "sum",
         "xg": "sum",
-        "assists": "sum",
-        "xa": "sum",
         "shots": "sum",
-        "key_passes": "sum",
-        "yellow_cards": "sum",
-        "red_cards": "sum",
         "xg_chain": "sum",
         "xg_buildup": "sum",
     }
