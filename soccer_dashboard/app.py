@@ -1729,7 +1729,6 @@ def highlight_categorical(val, color_mapping):
 #     template_file,
 # )
 
-# Refactored main function and fixed error in tab2
 def main():
     team_badges, player_images = get_badges()
     team_to_id_dict = get_team_to_id_mapping()
@@ -1832,7 +1831,7 @@ def main():
                         "props": [
                             ("background-color", "black"),
                             ("color", "floralwhite"),
-                            ("border-color", "#ffbd6d"),
+                            ("border-color": "#ffbd6d"),
                             ("text-align", "center"),
                         ],
                     },
@@ -1923,9 +1922,10 @@ def main():
             df_players_summary = df_players_summary[df_players_summary["team"] == team]
             df_shots = df_shots[df_shots["team"] == team]
 
-        df_players = df_players[df_players["season_id"] == season_id]
-        df_players_summary = df_players_summary[df_players_summary["season_id"] == season_id]
-        df_shots = df_shots[df_shots["season_id"] == season_id]
+        if season_id != "All":
+            df_players = df_players[df_players["season_id"] == season_id]
+            df_players_summary = df_players_summary[df_players_summary["season_id"] == season_id]
+            df_shots = df_shots[df_shots["season_id"] == season_id]
 
         positions = ["All"] + sorted(df_players["position"].unique().tolist())
         position = st.selectbox(
@@ -2032,90 +2032,79 @@ def main():
         )
 
         styled_df_players_matches = (
-            (
-                df_players_matches.style.format(
+            df_players_matches.style.format(
+                {
+                    **{
+                        col: "{:.0f}"
+                        for col in df_players_matches.columns.difference(
+                            ["Img", "Player", "Team", "Pos", "xG", "xA", "xGChain", "xGBuildup"]
+                        )
+                    },
+                    "xG": "{:.2f}",
+                    "xA": "{:.2f}",
+                    "xGChain": "{:.2f}",
+                    "xGBuildup": "{:.2f}",
+                }
+            )
+            .set_properties(
+                subset=["Player"],
+                **{
+                    "text-align": "left",
+                    "font-family": FenomenSans,
+                    "background-color": "#0d0b17",
+                    "color": "gainsboro",
+                    "border-color": "#ffbd6d",
+                },
+            )
+            .set_properties(
+                subset=df_players_matches.columns.difference(["Player"]),
+                **{
+                    "text-align": "center",
+                    "font-family": fm_rubik,
+                    "background-color": "#0d0b17",
+                    "color": "gainsboro",
+                    "border-color": "#ffbd6d",
+                },
+            )
+            .set_table_styles(
+                [
                     {
-                        **{
-                            col: "{:.0f}"
-                            for col in df_players_matches.columns.difference(
-                                [
-                                    "Img",
-                                    "Player",
-                                    "Team",
-                                    "Pos",
-                                    "xG",
-                                    "xA",
-                                    "xGChain",
-                                    "xGBuildup",
-                                ]
-                            )
-                        },
-                        "xG": "{:.2f}",
-                        "xA": "{:.2f}",
-                        "xGChain": "{:.2f}",
-                        "xGBuildup": "{:.2f}",
-                    }
-                )
-                .set_properties(
-                    subset=["Player"],
-                    **{
-                        "text-align": "left",
-                        "font-family": FenomenSans,
-                        "background-color": "#0d0b17",
-                        "color": "gainsboro",
-                        "border-color": "#ffbd6d",
+                        "selector": "th",
+                        "props": [
+                            ("font-family", fm_rubik),
+                            ("background-color", "#070d1d"),
+                            ("color", "floralwhite"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
                     },
-                )
-                .set_properties(
-                    subset=df_players_matches.columns.difference(["Player"]),
-                    **{
-                        "text-align": "center",
-                        "font-family": fm_rubik,
-                        "background-color": "#0d0b17",
-                        "color": "gainsboro",
-                        "border-color": "#ffbd6d",
+                    {
+                        "selector": "td:hover",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "gold"),
+                            ("border-color", "#ffbd6d"),
+                        ],
                     },
-                )
-                .set_table_styles(
-                    [
-                        {
-                            "selector": "th",
-                            "props": [
-                                ("font-family", fm_rubik),
-                                ("background-color", "#070d1d"),
-                                ("color", "floralwhite"),
-                                ("border-color", "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                        {
-                            "selector": "td:hover",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "gold"),
-                                ("border-color", "#ffbd6d"),
-                            ],
-                        },
-                        {
-                            "selector": ".blank.level0",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "floralwhite"),
-                                ("border-color": "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                        {
-                            "selector": ".blank.hover",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "black"),
-                                ("border-color": "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                    ]
-                )
+                    {
+                        "selector": ".blank.level0",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "floralwhite"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
+                    },
+                    {
+                        "selector": ".blank.hover",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "black"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
+                    },
+                ]
             )
             .text_gradient(subset=numerical_columns_matches, cmap="coolwarm")
             .highlight_max(subset=numerical_columns_matches, props=highlight_max_props)
@@ -2128,100 +2117,88 @@ def main():
         )
 
         numerical_columns_summary = df_players_summary_merge.columns.difference(
-            [
-                "Img",
-                "Player",
-                "Team",
-                "Pos",
-            ]
+            ["Img", "Player", "Team", "Pos"]
         )
 
         styled_df_players_summary = (
-            (
-                df_players_summary_merge.style.format(
+            df_players_summary_merge.style.format(
+                {
+                    **{
+                        col: "{:.0f}"
+                        for col in df_players_summary_merge.columns.difference(
+                            ["Img", "Player", "Team", "Pos"]
+                        )
+                    },
+                    "xT_total": "{:.2f}",
+                    "xT_perAction": "{:.3f}",
+                    "xG": "{:.2f}",
+                    "xA": "{:.2f}",
+                    "xGChain": "{:.2f}",
+                    "xGBuildup": "{:.2f}",
+                    "npxG/Shot": "{:.2f}",
+                    "KPs/90": "{:.1f}",
+                    "Sh/90": "{:.1f}",
+                }
+            )
+            .set_properties(
+                subset=["Player"],
+                **{
+                    "text-align": "left",
+                    "font-family": FenomenSans,
+                    "background-color": "#0d0b17",
+                    "color": "gainsboro",
+                    "border-color": "#ffbd6d",
+                },
+            )
+            .set_properties(
+                subset=df_players_summary_merge.columns.difference(["Player"]),
+                **{
+                    "text-align": "center",
+                    "font-family": fm_rubik,
+                    "background-color": "#0d0b17",
+                    "color": "gainsboro",
+                    "border-color": "#ffbd6d",
+                },
+            )
+            .set_table_styles(
+                [
                     {
-                        **{
-                            col: "{:.0f}"
-                            for col in df_players_summary_merge.columns.difference(
-                                [
-                                    "Img",
-                                    "Player",
-                                    "Team",
-                                    "Pos",
-                                ]
-                            )
-                        },
-                        "xT_total": "{:.2f}",
-                        "xT_perAction": "{:.3f}",
-                        "xG": "{:.2f}",
-                        "xA": "{:.2f}",
-                        "xGChain": "{:.2f}",
-                        "xGBuildup": "{:.2f}",
-                        "npxG/Shot": "{:.2f}",
-                        "KPs/90": "{:.1f}",
-                        "Sh/90": "{:.1f}",
-                    }
-                )
-                .set_properties(
-                    subset=["Player"],
-                    **{
-                        "text-align": "left",
-                        "font-family": FenomenSans,
-                        "background-color": "#0d0b17",
-                        "color": "gainsboro",
-                        "border-color": "#ffbd6d",
+                        "selector": "th",
+                        "props": [
+                            ("font-family", fm_rubik),
+                            ("background-color", "#070d1d"),
+                            ("color", "floralwhite"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
                     },
-                )
-                .set_properties(
-                    subset=df_players_summary_merge.columns.difference(["Player"]),
-                    **{
-                        "text-align": "center",
-                        "font-family": fm_rubik,
-                        "background-color": "#0d0b17",
-                        "color": "gainsboro",
-                        "border-color": "#ffbd6d",
+                    {
+                        "selector": "td:hover",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "gold"),
+                            ("border-color", "#ffbd6d"),
+                        ],
                     },
-                )
-                .set_table_styles(
-                    [
-                        {
-                            "selector": "th",
-                            "props": [
-                                ("font-family", fm_rubik),
-                                ("background-color", "#070d1d"),
-                                ("color", "floralwhite"),
-                                ("border-color", "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                        {
-                            "selector": "td:hover",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "gold"),
-                                ("border-color", "#ffbd6d"),
-                            ],
-                        },
-                        {
-                            "selector": ".blank.level0",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "floralwhite"),
-                                ("border-color", "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                        {
-                            "selector": ".blank.hover",
-                            "props": [
-                                ("background-color", "black"),
-                                ("color", "black"),
-                                ("border-color", "#ffbd6d"),
-                                ("text-align", "center"),
-                            ],
-                        },
-                    ]
-                )
+                    {
+                        "selector": ".blank.level0",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "floralwhite"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
+                    },
+                    {
+                        "selector": ".blank.hover",
+                        "props": [
+                            ("background-color", "black"),
+                            ("color", "black"),
+                            ("border-color", "#ffbd6d"),
+                            ("text-align", "center"),
+                        ],
+                    },
+                ]
             )
             .text_gradient(subset=numerical_columns_summary, cmap="coolwarm")
             .highlight_max(subset=numerical_columns_summary, props=highlight_max_props)
