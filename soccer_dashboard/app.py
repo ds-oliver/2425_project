@@ -484,6 +484,15 @@ def render_player_table(players, player_wages):
 
     return styled_df_players_matches, styled_df_players_wages
 
+
+@st.cache_data
+def get_data():
+    url = f"https://www.thesportsdb.com/api/v1/json/{API_KEY}/lookuptable.php?l={EPL_ID}&s={SEASON}"
+    response = requests.get(url)
+    data = response.json()
+    return data["table"]
+
+
 def main():
     team_badges = get_badges()
     team_to_id_dict = get_team_to_id_mapping()
