@@ -83,356 +83,15 @@ def load_player_data(filter=None):
     return df1, df_players_matches, df_players_summary, df_summary_teams, df_shots, df_team_stats, df_player_wages, df_xT
 
 
-# @st.cache_data
+@st.cache_data
 def process_team_stats(df, df_team_summary, season_range, team_badges):
-    df["season_id"] = df["season_id"].astype(int)
-    df_team_summary["team"] = df_team_summary["team"].astype(str)
-    df_team_summary["season_id"] = df_team_summary["season_id"].astype(int)
-
     df = df[(df["season_id"] >= season_range[0]) & (df["season_id"] <= season_range[1])]
-    df_team_summary = df_team_summary[
-        (df_team_summary["season_id"] >= season_range[0])
-        & (df_team_summary["season_id"] <= season_range[1])
-    ]
-
-    home_df = df[
-        [
-            "match_id",
-            "season",
-            "game",
-            "league_id",
-            "season_id",
-            "game_id",
-            "date",
-            "home_team",
-            "home_points",
-            "home_expected_points",
-            "home_goals",
-            "home_xg",
-            "home_np_xg",
-            "home_np_xg_difference",
-            "away_goals",
-            "home_ppda",
-            "away_ppda",
-            "home_deep_completions",
-            "away_deep_completions",
-        ]
-    ].rename(
-        columns={
-            "home_team": "team",
-            "home_points": "points",
-            "home_expected_points": "xPoints",
-            "home_goals": "goals",
-            "away_goals": "GA",
-            "home_xg": "xG",
-            "home_np_xg": "npxG",
-            "home_np_xg_difference": "npxGD",
-            "home_ppda": "ppda",
-            "away_ppda": "ppda_against",
-            "home_deep_completions": "deep_completions",
-            "away_deep_completions": "deep_completions_allowed",
-        }
+    df_team_summary["badge"] = df_team_summary["team"].map(team_badges)
+    df["badge"] = df["team"].map(team_badges)
+    styled_df_team_stats = df.style.set_properties(
+        **{"background-color": "black", "color": "white"}
     )
-
-    away_df = df[
-        [
-            "match_id",
-            "season",
-            "game",
-            "league_id",
-            "season_id",
-            "game_id",
-            "date",
-            "away_team",
-            "away_points",
-            "away_expected_points",
-            "away_goals",
-            "away_xg",
-            "away_np_xg",
-            "away_np_xg_difference",
-            "home_goals",
-            "away_ppda",
-            "home_ppda",
-            "away_deep_completions",
-            "home_deep_completions",
-        ]
-    ].rename(
-        columns={
-            "away_team": "team",
-            "away_points": "points",
-            "away_expected_points": "xPoints",
-            "away_goals": "goals",
-            "home_goals": "GA",
-            "away_xg": "xG",
-            "away_np_xg": "npxG",
-            "away_np_xg_difference": "npxGD",
-            "away_ppda": "ppda",
-            "home_ppda": "ppda_against",
-            "away_deep_completions": "deep_completions",
-            "home_deep_completions": "deep_completions_allowed",
-        }
-    )
-
-    team_df = pd.concat([home_df, away_df], ignore_index=True)
-    pd.set_option("display.float_format", lambda x: "%.1f" % x)
-    team_df["badge"] = team_df["team"].map(team_badges)
-
-    agg_funcs = {
-        "badge": "first",
-        "points": "sum",
-        "xPoints": "sum",
-        "goals": "sum",
-        "GA": "sum",
-        "xG": "sum",
-        "npxG": "sum",
-        "npxGD": "sum",
-        "ppda": "mean",
-        "ppda_against": "mean",
-        "deep_completions": "sum",
-        "deep_completions_allowed": "sum",
-    }
-
-    team_aggregated = (
-        team_df.groupby(["team", "season_id"]).agg(agg_funcs).reset_index()
-    )
-
-    merged_df = pd.merge(
-        team_aggregated,
-        df_team_summary,
-        how="left",
-        on=["team", "season_id"],
-        suffixes=("", "_summary"),
-    )
-
-    agg_funcs_final = {
-        "badge": "first",
-        "points": "sum",
-        "xPoints": "sum",
-        "goals": "sum",
-        "np_goals": "sum",
-        "assists": "sum",
-        "GA": "sum",
-        "xG": "sum",
-        "npxG": "sum",
-        "npxGD": "sum",
-        "xa": "sum",
-        "ppda": "mean",
-        "ppda_against": "mean",
-        "deep_completions": "sum",
-    }
-
-    team_stats = (
-        merged_df.groupby("team")
-        .agg(agg_funcs_final)
-        .reset_index()
-        .round(1)
-        .sort_values(by="points", ascending=False)
-        .reset_index(drop=True)
-    )
-
-    team_stats["badge"] = team_stats["badge"].apply(
-        lambda x: f'<img src="{x}" width="32">'
-    )
-    team_stats = team_stats[
-        ["badge"] + [col for col in team_stats.columns if col != "badge"]
-    ]
-    team_stats["goal_diff"] = team_stats["goals"] - team_stats["GA"]
-    team_stats["np:G-xG"] = team_stats["np_goals"] - team_stats["npxG"]
-    team_stats["A-xA"] = team_stats["assists"] - team_stats["xa"]
-    team_stats = team_stats.drop(columns=["GA"])
-
-    numeric_cols = [
-        "points",
-        "xPoints",
-        "goals",
-        "np_goals",
-        "xG",
-        "np:G-xG",
-        "A-xA",
-        "npxG",
-        "npxGD",
-        "ppda",
-        "deep_completions",
-    ]
-
-    team_stats[numeric_cols] = team_stats[numeric_cols].round(1)
-    cols_to_keep = [
-        "team",
-        "badge",
-        "points",
-        "xPoints",
-        "goals",
-        "np_goals",
-        "xG",
-        "npxG",
-        "npxGD",
-        "np:G-xG",
-        "A-xA",
-        "ppda",
-        "deep_completions",
-    ]
-    team_stats = team_stats[cols_to_keep]
-    team_stats = team_stats[
-        ["badge"] + [col for col in team_stats.columns if col != "badge"]
-    ]
-
-    summary_df = team_stats[numeric_cols].agg(["sum", "mean"]).transpose()
-    summary_df.columns = ["Sum", "Average"]
-    summary_df = summary_df.T
-
-    for col in team_stats.columns:
-        if col not in numeric_cols:
-            summary_df[col] = ""
-
-    summary_df = summary_df[team_stats.columns]
-
-    styled_team_stats = team_stats.style.format({col: "{:.1f}" for col in numeric_cols})
-
-    styled_team_stats = (
-        styled_team_stats.set_properties(
-            subset=["team"],
-            **{
-                "text-align": "left",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        )
-        .set_properties(
-            subset=team_stats.columns.difference(["team"]),
-            **{
-                "text-align": "center",
-                "font-family": fm_rubik,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        )
-        .set_table_styles(
-            [
-                {
-                    "selector": "th",
-                    "props": [
-                        ("font-family", fm_rubik),
-                        ("background-color", "#070d1d"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": "td:hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "wheat"),
-                        ("border-color", "#ffbd6d"),
-                    ],
-                },
-                {
-                    "selector": ".blank.level0",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": ".blank.hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "black"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-            ]
-        )
-        .text_gradient(
-            subset=numeric_cols,
-            cmap="coolwarm",
-        )
-        .highlight_max(
-            subset=numeric_cols,
-            props=highlight_max_props,
-        )
-        .highlight_min(
-            subset=numeric_cols,
-            props=highlight_min_props,
-        )
-        .hide(axis="index")
-    )
-
-    styled_summary_stats = summary_df.style.format(
-        {col: "{:.1f}" for col in numeric_cols}
-    )
-
-    styled_summary_stats = (
-        styled_summary_stats.set_properties(
-            subset=["team"],
-            **{
-                "text-align": "left",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        )
-        .set_properties(
-            subset=summary_df.columns.difference(["team"]),
-            **{
-                "text-align": "center",
-                "font-family": fm_rubik,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        )
-        .set_table_styles(
-            [
-                {
-                    "selector": "th",
-                    "props": [
-                        ("font-family", fm_rubik),
-                        ("background-color", "#070d1d"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": "td:hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                    ],
-                },
-                {
-                    "selector": ".blank.level0",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": ".blank.hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "black"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-            ]
-        )
-    )
-
-    combined_styler = styled_team_stats.concat(styled_summary_stats)
-    return combined_styler
+    return styled_df_team_stats
 
 
 @st.cache_data
@@ -552,86 +211,34 @@ def feature_engineering(df_players_matches, df_players_summary, df_shots, team_b
 
     return df_players_matches, df_players_merge, df_situations
 
-@st.cache_data
 def transform_shot_data(df_shots):
-    grouped_data = df_shots.groupby(["player", "team", "position", "situation", "body_part", "zone_y"]).agg(
-        total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
-        shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+    grouped_df_shots = df_shots.groupby(["player", "team"]).agg(
+        {
+            "shots": "sum",
+            "xg": "sum",
+            "goals": "sum",
+            "assists": "sum",
+            "key_passes": "sum",
+            "np_goals": "sum",
+            "np_xg": "sum",
+            "minutes": "sum",
+        }
     ).reset_index()
 
-    matches_data = df_shots.groupby(["player", "team", "position"]).agg(matches=pd.NamedAgg(column="game", aggfunc="nunique")).reset_index()
-
-    grouped_data["per_shot_xg"] = grouped_data["total_xg"] / grouped_data["shot_count"]
-
-    situation_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="situation",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    situation_pivot.columns = [f"{col} xG" for col in situation_pivot.columns]
-    situation_pivot.reset_index(inplace=True)
-
-    body_part_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="body_part",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    body_part_pivot.columns = [f"{col} xG" for col in body_part_pivot.columns]
-    body_part_pivot.reset_index(inplace=True)
-
-    zone_y_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="zone_y",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
-    zone_y_pivot.reset_index(inplace=True)
-
-    playerwise_result = situation_pivot.merge(body_part_pivot, on=["player", "team", "position"], how="outer")
-    playerwise_result = playerwise_result.merge(zone_y_pivot, on=["player", "team", "position"], how="outer")
-    playerwise_result = playerwise_result.merge(matches_data, on=["player", "team", "position"], how="left")
-
-    team_grouped_data = df_shots.groupby(["team", "situation", "body_part", "zone_y"]).agg(
-        total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
-        shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+    grouped_df_shots_team = df_shots.groupby("team").agg(
+        {
+            "shots": "sum",
+            "xg": "sum",
+            "goals": "sum",
+            "assists": "sum",
+            "key_passes": "sum",
+            "np_goals": "sum",
+            "np_xg": "sum",
+            "minutes": "sum",
+        }
     ).reset_index()
+    return grouped_df_shots, grouped_df_shots_team
 
-    team_grouped_data["per_shot_xg"] = team_grouped_data["total_xg"] / team_grouped_data["shot_count"]
-
-    team_situation_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="situation",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_situation_pivot.columns = [f"{col} xG" for col in team_situation_pivot.columns]
-    team_situation_pivot.reset_index(inplace=True)
-
-    team_body_part_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="body_part",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_body_part_pivot.columns = [f"{col} xG" for col in team_body_part_pivot.columns]
-    team_body_part_pivot.reset_index(inplace=True)
-
-    team_zone_y_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="zone_y",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
-    team_zone_y_pivot.reset_index(inplace=True)
-
-    teamwise_result = team_situation_pivot.merge(team_body_part_pivot, on="team", how="outer")
-    teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
-
-    return playerwise_result, teamwise_result
 
 @st.cache_data
 def plot_home_away_goals(df):
@@ -672,171 +279,21 @@ def plot_home_away_goals(df):
 
     return chart, chart2
 
+
 def render_player_table(players, player_wages):
-    df_players_matches = pd.DataFrame(players)
-
-    df_players_matches = df_players_matches[
-        ["strCutout", "strPlayer", "strPosition", "trophies", "dateBorn", "Int", "strNationality", "strNumber", "strHeight"]
-    ]
-    df_players_matches.columns = ["Player", "Name", "Position", "Trophies", "Age", "Int", "Nation", "Number", "Height"]
-
-    df_players_matches["Trophies"] = df_players_matches["Trophies"].astype(int)
-    df_players_matches["Age"] = pd.to_datetime(df_players_matches["Age"]).apply(lambda x: pd.Timestamp.now().year - x.year)
-    df_players_matches["Name"] = df_players_matches["Name"].apply(unidecode)
-
-    df_players_wages = pd.merge(df_players_matches, player_wages, left_on="Name", right_on="name", how="left")
-
-    df_players_wages = df_players_wages[
-        ["Player", "Name", "Position", "Trophies", "Age", "Int", "Nation", "Number", "weekly_gross_gbp", "years", "release_gbp"]
-    ]
-    df_players_wages.columns = ["Player", "Name", "Position", "Trophies", "Age", "Int", "Nation", "Number", "WklyWages", "YrsLeft", "Release"]
-
-    df_players_matches = df_players_matches.sort_values("Trophies", ascending=False).reset_index(drop=True)
-    df_players_wages = df_players_wages.sort_values("WklyWages", ascending=False).reset_index(drop=True)
-    df_players_wages.fillna("NA", inplace=True)
-
-    if "Manager" in df_players_matches["Position"].values:
-        manager = df_players_matches[df_players_matches["Position"] == "Manager"]
-        df_players_matches = df_players_matches[df_players_matches["Position"] != "Manager"]
-        df_players_matches = pd.concat([manager, df_players_matches]).reset_index(drop=True)
-
-    if "Manager" in df_players_wages["Position"].values:
-        manager_wages = df_players_wages[df_players_wages["Position"] == "Manager"]
-        df_players_wages = df_players_wages[df_players_wages["Position"] != "Manager"]
-        df_players_wages = pd.concat([manager_wages, df_players_wages]).reset_index(drop=True)
-
-    df_players_wages["WklyWages"] = df_players_wages["WklyWages"].apply(lambda x: f"£{x:,.2f}" if x != "NA" else "NA")
-    df_players_wages["Release"] = df_players_wages["Release"].apply(lambda x: f"£{x:,.2f}" if x != "NA" else "NA")
-    df_players_wages["YrsLeft"] = df_players_wages["YrsLeft"].apply(lambda x: f"{x}" if x != "NA" else "NA")
-
-    df_players_matches["Player"] = df_players_matches.apply(lambda row: f'<img src="{row["Player"]}" width="50">', axis=1)
-    df_players_wages["Player"] = df_players_wages.apply(lambda row: f'<img src="{row["Player"]}" width="50">', axis=1)
-    df_players_matches["Int"] = df_players_matches.apply(lambda row: (f'<img src="{row["Int"]}" width="32">' if row["Int"] else ""), axis=1)
-    df_players_wages["Int"] = df_players_wages.apply(lambda row: (f'<img src="{row["Int"]}" width="32">' if row["Int"] else ""), axis=1)
-
-    styled_df_players_matches = (
-        df_players_matches.style.set_properties(
-            subset=["Name", "Position", "Nation"],
-            **{
-                "text-align": "left",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        ).set_properties(
-            subset=df_players_matches.columns.difference(["Name", "Position", "Nation"]),
-            **{
-                "text-align": "center",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        ).set_table_styles(
-            [
-                {
-                    "selector": "th",
-                    "props": [
-                        ("font-family", fm_rubik),
-                        ("background-color", "#070d1d"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": "td:hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "gold"),
-                        ("border-color", "#ffbd6d"),
-                    ],
-                },
-                {
-                    "selector": ".blank.level0",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": ".blank.hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "black"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-            ]
-        )
+    df_players = pd.DataFrame(players)
+    df_players_wages = pd.DataFrame(player_wages)
+    styled_players = df_players.style.format(
+        {"Goals": "{:.0f}", "Assists": "{:.0f}"}
+    ).set_properties(
+        **{"background-color": "black", "color": "white"}
     )
-
-    styled_df_players_wages = (
-        df_players_wages.style.set_properties(
-            subset=["Name", "Position", "Nation"],
-            **{
-                "text-align": "left",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        ).set_properties(
-            subset=df_players_wages.columns.difference(["Name", "Position", "Nation"]),
-            **{
-                "text-align": "center",
-                "font-family": FenomenSans,
-                "background-color": "#0d0b17",
-                "color": "gainsboro",
-                "border-color": "#ffbd6d",
-            },
-        ).set_table_styles(
-            [
-                {
-                    "selector": "th",
-                    "props": [
-                        ("font-family", fm_rubik),
-                        ("background-color", "#070d1d"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": "td:hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "gold"),
-                        ("border-color", "#ffbd6d"),
-                    ],
-                },
-                {
-                    "selector": ".blank.level0",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "floralwhite"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-                {
-                    "selector": ".blank.hover",
-                    "props": [
-                        ("background-color", "black"),
-                        ("color", "black"),
-                        ("border-color", "#ffbd6d"),
-                        ("text-align", "center"),
-                    ],
-                },
-            ]
-        )
+    styled_players_wages = df_players_wages.style.format(
+        {"Wage": "${:,.0f}"}
+    ).set_properties(
+        **{"background-color": "black", "color": "white"}
     )
-
-    return styled_df_players_matches, styled_df_players_wages
+    return styled_players, styled_players_wages
 
 
 @st.cache_data
@@ -848,37 +305,32 @@ def get_data():
 
 
 def main():
-    team_badges = get_badges()
+    team_badges, player_images = get_badges()
     team_to_id_dict = get_team_to_id_mapping()
 
-    data = get_data()
-    df = pd.DataFrame(data, index=None)
+    # Load data
+    _, _, _, df_team_summary, _, df_team_stats, _, _, _ = load_player_data()
 
-    df = df[
-        ["intRank", "intPoints", "strTeamBadge", "strTeam", "intPlayed", "intWin", "intDraw", "intLoss", "intGoalsFor", "intGoalsAgainst", "intGoalDifference"]
-    ]
-    df.columns = [
-        "Rank",
-        "Points",
-        "Badge",
-        "Team",
-        "Played",
-        "Wins",
-        "Draws",
-        "Losses",
-        "Goals For",
-        "Goals Against",
-        "Goal Difference",
-    ]
-    df.reset_index(drop=True, inplace=True)
+    # Create a tabbed layout
+    st.markdown(
+        f'<p style="font-family:{fm_rubik}; font-size: 56px; color: wheat;">English Premier League Dashboard</p>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown(f'<p style="font-family:{fm_rubik}; font-size: 56px; color: wheat;">English Premier League Dashboard</p>', unsafe_allow_html=True)
-
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Standings", "Team Stats", "Player Stats", "Chance Creation", "Team Players", "Scoring Trends"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Standings", "Team Stats", "Player Stats", 
+        "Chance Creation", "Team Players", "Scoring Trends"
+    ])
 
     with tab1:
-        st.markdown(f'<p style="font-family:{fm_rubik}; font-size: 24px; color: wheat;">2023-2024 Season Standings</p>', unsafe_allow_html=True)
-        df["Badge"] = df.apply(lambda row: f'<img src="{row["Badge"]}" width="32">', axis=1)
+        st.markdown(
+            f'<p style="font-family:{fm_rubik}; font-size: 24px; color: wheat;">2023-2024 Season Standings</p>',
+            unsafe_allow_html=True,
+        )
+        df = get_data()
+        df["Badge"] = df.apply(
+            lambda row: f'<img src="{row["Badge"]}" width="32">', axis=1
+        )
         df["Goal Difference"] = df["Goal Difference"].astype(int)
         df["Goals Against"] = df["Goals Against"].astype(int)
 
@@ -892,7 +344,8 @@ def main():
                     "color": "gainsboro",
                     "border-color": "#ffbd6d",
                 },
-            ).set_properties(
+            )
+            .set_properties(
                 subset=df.columns.difference(["Team"]),
                 **{
                     "text-align": "center",
@@ -901,7 +354,8 @@ def main():
                     "color": "gainsboro",
                     "border-color": "#ffbd6d",
                 },
-            ).set_table_styles(
+            )
+            .set_table_styles(
                 [
                     {
                         "selector": "th",
@@ -940,307 +394,182 @@ def main():
                         ],
                     },
                 ]
-            ).text_gradient(
+            )
+            .text_gradient(
                 subset=["Points", "Goals For", "Goals Against", "Goal Difference"],
                 cmap="coolwarm",
-            ).highlight_max(
+            )
+            .highlight_max(
                 subset=["Points", "Goals For", "Goals Against", "Goal Difference"],
-                props=highlight_max_props,
-            ).highlight_min(
+                props="color:crimson; font-weight:bold; background-color:#030021;",
+            )
+            .highlight_min(
                 subset=["Points", "Goals For", "Goals Against", "Goal Difference"],
-                props=highlight_min_props,
-            ).hide(axis="index")
+                props="color:#A6FFFE; font-weight:bold; background-color:#100000;",
+            )
+            .hide(axis="index")
         )
 
-        st.markdown(styled_df.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+        st.markdown(
+            styled_df.to_html(escape=False, index=False, bold_headers=True),
+            unsafe_allow_html=True,
+        )
 
     with tab2:
         st.header("Team Stats")
-        _, _, _, df_team_summary, _, df_team_stats, _, _ = load_player_data()
-
         season_ids = df_team_stats['season_id'].unique()
-        default_season = 2023
         season_range = st.slider(
             "Select Season Range",
             min_value=int(season_ids.min()),
             max_value=int(season_ids.max()),
-            value=(default_season, default_season),
+            value=(2023, 2023),  # Set default range to the 2023 season
             key="team_season_range",
         )
-
         styled_team_stats = process_team_stats(
             df_team_stats, df_team_summary, season_range, team_badges
         )
-
-        st.markdown(styled_team_stats.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+        st.markdown(
+            styled_team_stats.to_html(escape=False, index=False, bold_headers=True),
+            unsafe_allow_html=True,
+        )
 
     with tab3:
         st.header("Player Stats")
-        _, df_players, df_players_summary, _, df_shots, _, df_players_wages, df_xT, _ = load_player_data()
+        (
+            df1, df_players, df_players_summary,
+            df_summary_teams, df_shots, df_team_stats,
+            df_players_wages, df_xT, _
+        ) = load_player_data()
 
-        all_season_ids = ["All"] + sorted(df_players["season_id"].unique(), reverse=True)
-        season_id = st.selectbox("Select a season to filter the data", sorted(df_players["season_id"].unique(), reverse=True), placeholder="2023")
-        teams = ["All"] + sorted(df_players["team"].unique())
-        team = st.selectbox("Select a team to filter the data", teams, placeholder="All")
+        with st.container(border=True):
+            all_season_ids = ["All"] + sorted(df_players["season_id"].unique(), reverse=True)
+            season_id = st.selectbox(
+                "Select a season to filter the data",
+                sorted(df_players["season_id"].unique(), reverse=True),
+                placeholder="2023",
+            )
+            teams = ["All"] + sorted(df_players["team"].unique())
+            team = st.selectbox(
+                "Select a team to filter the data",
+                teams,
+                placeholder="All",
+            )
 
-        if team != "All":
-            df_players = df_players[df_players["team"] == team]
-            df_players_summary = df_players_summary[df_players_summary["team"] == team]
-            df_shots = df_shots[df_shots["team"] == team]
+            if team != "All":
+                df_players = df_players[df_players["team"] == team]
+                df_players_summary = df_players_summary[df_players_summary["team"] == team]
+                df_shots = df_shots[df_shots["team"] == team]
 
-        df_players = df_players[df_players["season_id"] == season_id]
-        df_players_summary = df_players_summary[df_players_summary["season_id"] == season_id]
-        df_shots = df_shots[df_shots["season_id"] == season_id]
+            df_players = df_players[df_players["season_id"] == season_id]
+            df_players_summary = df_players_summary[df_players_summary["season_id"] == season_id]
+            df_shots = df_shots[df_shots["season_id"] == season_id]
+            positions = ["All"] + sorted(df_players["position"].unique().tolist())
+            position = st.selectbox(
+                "Select a position to filter the data",
+                positions,
+                placeholder="All",
+            )
 
-        positions = ["All"] + sorted(df_players["position"].unique().tolist())
-        position = st.selectbox("Select a position to filter the data", positions, placeholder="All")
+            if position != "All":
+                df_players = df_players[df_players["position"] == position]
 
-        if position != "All":
-            df_players = df_players[df_players["position"] == position]
+            df_players_matches, df_players_summary_merge, _ = feature_engineering(
+                df_players, df_xT, df_shots, team_badges, player_images
+            )
 
-        df_players_matches, df_players_summary_merge, _ = feature_engineering(
-            df_players, df_xT, df_shots, team_badges, player_images
-        )
+            df_players_summary_merge["player_image"] = df_players_summary_merge["player_image"].apply(lambda x: f'<img src="{x}" width="32">')
+            df_players_matches = df_players_matches[["player_image", "player", "badge", "position", "starts", "Apps", "goals", "shots", "xg", "xa", "xg_chain", "xg_buildup"]]
+            df_players_matches.columns = ["Img", "Player", "Team", "Pos", "Starts", "Apps", "Gls", "Shots", "xG", "xA", "xGChain", "xGBuildup"]
+            df_players_summary_merge = df_players_summary_merge[["badge", "player", "position", "starts", "goals", "np_goals", "xg", "np:G-xG", "assists", "xa", "A-xA", "npxG/shot", "KPs/90", "Sh/90", "xg_chain", "xg_buildup", "xT_total", "xT_perAction"]]
+            df_players_summary_merge.columns = ["Team", "Player", "Pos", "GS", "Gls", "npGls", "xG", "np:G-xG", "Assists", "xA", "A-xA", "npxG/Shot", "KPs/90", "Sh/90", "xGChain", "xGBuildup", "xT_total", "xT_perAction"]
 
-        df_players_matches["badge"] = df_players_matches.apply(lambda row: f'<img src="{row["badge"]}" width="32">', axis=1)
-        df_players_matches["player_image"] = df_players_matches["player_image"].apply(lambda x: f'<img src="{x}" width="32">')
-        df_players_summary_merge["badge"] = df_players_summary_merge.apply(lambda row: f'<img src="{row["badge"]}" width="32">', axis=1)
-        df_players_summary_merge["player_image"] = df_players_summary_merge["player_image"].apply(lambda x: f'<img src="{x}" width="32">')
+            color_mapping = get_color_mapping(df_players_matches["Pos"].unique())
+            numerical_columns_matches = df_players_matches.columns.difference(["Img", "Player", "Team", "Pos"])
+            styled_df_players_matches = df_players_matches.style.format({col: "{:.0f}" for col in df_players_matches.columns.difference(["Img", "Player", "Team", "Pos", "xG", "xA", "xGChain", "xGBuildup"])}).set_properties(subset=["Player"], **{"text-align": "left", "font-family": FenomenSans, "background-color": "#0d0b17", "color": "gainsboro", "border-color": "#ffbd6d"}).set_properties(subset=df_players_matches.columns.difference(["Player"]), **{"text-align": "center", "font-family": fm_rubik, "background-color": "#0d0b17", "color": "gainsboro", "border-color": "#ffbd6d"}).set_table_styles([{"selector": "th", "props": [("font-family", fm_rubik), ("background-color", "#070d1d"), ("color", "floralwhite"), ("border-color", "#ffbd6d"), ("text-align", "center")]}, {"selector": "td:hover", "props": [("background-color", "black"), ("color", "gold"), ("border-color", "#ffbd6d")]}, {"selector": ".blank.level0", "props": [("background-color", "black"), ("color", "floralwhite"), ("border-color", "#ffbd6d"), ("text-align", "center")]}, {"selector": ".blank.hover", "props": [("background-color", "black"), ("color", "black"), ("border-color", "#ffbd6d"), ("text-align", "center")]}]).text_gradient(subset=numerical_columns_matches, cmap="coolwarm").highlight_max(subset=numerical_columns_matches, props="color:crimson; font-weight:bold; background-color:#030021;").highlight_min(subset=numerical_columns_matches, props="color:#A6FFFE; font-weight:bold; background-color:#100000;").applymap(lambda val: highlight_categorical(val, color_mapping), subset=["Pos"]).hide(axis="index")
+            numerical_columns_summary = df_players_summary_merge.columns.difference(["Img", "Player", "Team", "Pos"])
+            styled_df_players_summary = df_players_summary_merge.style.format({col: "{:.0f}" for col in df_players_summary_merge.columns.difference(["Img", "Player", "Team", "Pos"])}).set_properties(subset=["Player"], **{"text-align": "left", "font-family": FenomenSans, "background-color": "#0d0b17", "color": "gainsboro", "border-color": "#ffbd6d"}).set_properties(subset=df_players_summary_merge.columns.difference(["Player"]), **{"text-align": "center", "font-family": fm_rubik, "background-color": "#0d0b17", "color": "gainsboro", "border-color": "#ffbd6d"}).set_table_styles([{"selector": "th", "props": [("font-family", fm_rubik), ("background-color", "#070d1d"), ("color", "floralwhite"), ("border-color", "#ffbd6d"), ("text-align", "center")]}, {"selector": "td:hover", "props": [("background-color", "black"), ("color", "gold"), ("border-color", "#ffbd6d")]}, {"selector": ".blank.level0", "props": [("background-color", "black"), ("color", "floralwhite"), ("border-color", "#ffbd6d"), ("text-align", "center")]}, {"selector": ".blank.hover", "props": [("background-color", "black"), ("color", "black"), ("border-color", "#ffbd6d"), ("text-align", "center")]}]).text_gradient(subset=numerical_columns_summary, cmap="coolwarm").highlight_max(subset=numerical_columns_summary, props="color:crimson; font-weight:bold; background-color:#030021;").highlight_min(subset=numerical_columns_summary, props="color:#A6FFFE; font-weight:bold; background-color:#100000;").applymap(lambda val: highlight_categorical(val, color_mapping), subset=["Pos"]).hide(axis="index")
 
-        df_players_matches = df_players_matches[
-            ["player_image", "player", "badge", "position", "starts", "Apps", "goals", "shots", "xg", "xa", "xg_chain", "xg_buildup"]
-        ]
-        df_players_matches.columns = [
-            "Img", "Player", "Team", "Pos", "Starts", "Apps", "Gls", "Shots", "xG", "xA", "xGChain", "xGBuildup"
-        ]
-
-        df_players_summary_merge.columns.tolist()
-
-        df_players_summary_merge = df_players_summary_merge[
-            ["badge", "player", "position", "starts", "goals", "np_goals", "xg", "np:G-xG", "assists", "xa", "A-xA", "npxG/shot", "KPs/90", "Sh/90", "xg_chain", "xg_buildup", "xT_total", "xT_perAction"]
-        ]
-        df_players_summary_merge.columns = [
-            "Team", "Player", "Pos", "GS", "Gls", "npGls", "xG", "np:G-xG", "Assists", "xA", "A-xA", "npxG/Shot", "KPs/90", "Sh/90", "xGChain", "xGBuildup", "xT_total", "xT_perAction"
-        ]
-
-        color_mapping = get_color_mapping(df_players_matches["Pos"].unique())
-
-        numerical_columns_matches = df_players_matches.columns.difference(
-            ["Img", "Player", "Team", "Pos"]
-        )
-
-        styled_df_players_matches = (
-            df_players_matches.style.format(
-                {**{col: "{:.0f}" for col in df_players_matches.columns.difference(["Img", "Player", "Team", "Pos", "xG", "xA", "xGChain", "xGBuildup"])},
-                "xG": "{:.2f}",
-                "xA": "{:.2f}",
-                "xGChain": "{:.2f}",
-                "xGBuildup": "{:.2f}",}
-            ).set_properties(
-                subset=["Player"],
-                **{
-                    "text-align": "left",
-                    "font-family": FenomenSans,
-                    "background-color": "#0d0b17",
-                    "color": "gainsboro",
-                    "border-color": "#ffbd6d",
-                },
-            ).set_properties(
-                subset=df_players_matches.columns.difference(["Player"]),
-                **{
-                    "text-align": "center",
-                    "font-family": fm_rubik,
-                    "background-color": "#0d0b17",
-                    "color": "gainsboro",
-                    "border-color": "#ffbd6d",
-                },
-            ).set_table_styles(
-                [
-                    {
-                        "selector": "th",
-                        "props": [
-                            ("font-family", fm_rubik),
-                            ("background-color", "#070d1d"),
-                            ("color", "floralwhite"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                    {
-                        "selector": "td:hover",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "gold"),
-                            ("border-color", "#ffbd6d"),
-                        ],
-                    },
-                    {
-                        "selector": ".blank.level0",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "floralwhite"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                    {
-                        "selector": ".blank.hover",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "black"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                ]
-            ).text_gradient(subset=numerical_columns_matches, cmap="coolwarm").highlight_max(subset=numerical_columns_matches, props=highlight_max_props).highlight_min(subset=numerical_columns_matches, props=highlight_min_props).applymap(
-                lambda val: highlight_categorical(val, color_mapping), subset=["Pos"],
-            ).hide(axis="index")
-        )
-
-        numerical_columns_summary = df_players_summary_merge.columns.difference(
-            ["Img", "Player", "Team", "Pos"]
-        )
-
-        styled_df_players_summary = (
-            df_players_summary_merge.style.format(
-                {**{col: "{:.0f}" for col in df_players_summary_merge.columns.difference(["Img", "Player", "Team", "Pos"])},
-                "xT_total": "{:.2f}",
-                "xT_perAction": "{:.3f}",
-                "xG": "{:.2f}",
-                "xA": "{:.2f}",
-                "xGChain": "{:.2f}",
-                "xGBuildup": "{:.2f}",
-                "npxG/Shot": "{:.2f}",
-                "KPs/90": "{:.1f}",
-                "Sh/90": "{:.1f}",}
-            ).set_properties(
-                subset=["Player"],
-                **{
-                    "text-align": "left",
-                    "font-family": FenomenSans,
-                    "background-color": "#0d0b17",
-                    "color": "gainsboro",
-                    "border-color": "#ffbd6d",
-                },
-            ).set_properties(
-                subset=df_players_summary_merge.columns.difference(["Player"]),
-                **{
-                    "text-align": "center",
-                    "font-family": fm_rubik,
-                    "background-color": "#0d0b17",
-                    "color": "gainsboro",
-                    "border-color": "#ffbd6d",
-                },
-            ).set_table_styles(
-                [
-                    {
-                        "selector": "th",
-                        "props": [
-                            ("font-family", fm_rubik),
-                            ("background-color", "#070d1d"),
-                            ("color", "floralwhite"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                    {
-                        "selector": "td:hover",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "gold"),
-                            ("border-color", "#ffbd6d"),
-                        ],
-                    },
-                    {
-                        "selector": ".blank.level0",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "floralwhite"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                    {
-                        "selector": ".blank.hover",
-                        "props": [
-                            ("background-color", "black"),
-                            ("color", "black"),
-                            ("border-color", "#ffbd6d"),
-                            ("text-align", "center"),
-                        ],
-                    },
-                ]
-            ).text_gradient(subset=numerical_columns_summary, cmap="coolwarm").highlight_max(subset=numerical_columns_summary, props=highlight_max_props).highlight_min(subset=numerical_columns_summary, props=highlight_min_props).applymap(
-                lambda val: highlight_categorical(val, color_mapping), subset=["Pos"],
-            ).hide(axis="index")
-        )
-
-        st.markdown(styled_df_players_summary.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
-
+            st.markdown(
+                styled_df_players_summary.to_html(escape=False, index=False, bold_headers=True),
+                unsafe_allow_html=True
+            )
+    
     with tab4:
         st.header("Chance Creation")
         _, _, _, _, df_shots, _, _, _, player_positions = load_player_data()
-
         season_ids = sorted(df_shots["season_id"].unique(), reverse=True)
-        default_season = 2023
         season_range = st.slider(
             "Select Season Range",
             min_value=int(min(season_ids)),
             max_value=int(max(season_ids)),
-            value=(default_season, default_season),
+            value=(2023, 2023),
             key="chance_creation_season_range",
         )
-
-        df_shots = df_shots[(df_shots["season_id"] >= season_range[0]) & (df_shots["season_id"] <= season_range[1])]
+        df_shots = df_shots[
+            (df_shots["season_id"] >= season_range[0]) &
+            (df_shots["season_id"] <= season_range[1])
+        ]
         teams = ["All"] + sorted(df_shots["team"].unique())
-        default_team = "All"
-        team = st.selectbox("Select a team", teams, index=teams.index(default_team), key="chance_creation_team")
-
+        team = st.selectbox(
+            "Select a team", teams, index=teams.index("All"), key="chance_creation_team"
+        )
         if team != "All":
             df_shots = df_shots[df_shots["team"] == team]
-
         positions = ["All"] + sorted(df_shots["position"].unique())
-        default_position = "All"
-        position = st.selectbox("Select a position", positions, index=positions.index(default_position), key="chance_creation_position")
-
+        position = st.selectbox(
+            "Select a position", positions, index=positions.index("All"), key="chance_creation_position"
+        )
         if position != "All":
             df_shots = df_shots[df_shots["position"] == position]
 
         df_shots, df_shots_team = transform_shot_data(df_shots)
         default_matches_value = int(0.3 * max(df_shots["matches"]))
-        min_games = st.number_input("Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games")
+        min_games = st.number_input(
+            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
+        )
         df_shots = df_shots[df_shots["matches"] >= min_games]
         df_shots = df_shots.drop(columns=["matches"])
-
         df_shots = add_badges(df_shots, team_badges, playerwise=True)
         df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
-
         team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
         if team_wise == "Yes":
-            st.info(f"Table displays per shot stats for each team", icon="🚨")
-            st.markdown(df_shots_team.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+            st.markdown(
+                df_shots_team.to_html(escape=False, index=False, bold_headers=True),
+                unsafe_allow_html=True,
+            )
         else:
-            st.info(f"Table displays per shot stats for each **player**", icon="🚨")
-            st.markdown(df_shots.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+            st.markdown(
+                df_shots.to_html(escape=False, index=False, bold_headers=True),
+                unsafe_allow_html=True,
+            )
 
     with tab5:
         st.header("Team Players")
         _, _, _, _, _, _, df_players_wages, _, _ = load_player_data(filter=True)
-        team = st.selectbox("Select a team", sorted(df["Team"].unique()), placeholder="Arsenal")
+        team = st.selectbox(
+            "Select a team", sorted(df["Team"].unique()), placeholder="Arsenal"
+        )
         team_id = team_to_id_dict[team]
         players = fetch_player_data(team, team_id)
         show_wages = st.radio("Show player wages", ["Yes", "No"])
-
         if players:
             styled_players, styled_players_wages = render_player_table(players, df_players_wages)
             if show_wages == "Yes":
-                st.markdown(f'<p style="font-family:{fm_rubik}; font-size: 24px; color: wheat;">{team} Player Wages</p>', unsafe_allow_html=True)
-                st.markdown(styled_players_wages.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+                st.markdown(
+                    f'<p style="font-family:{fm_rubik}; font-size: 24px; color: wheat;">{team} Player Wages</p>',
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    styled_players_wages.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True
+                )
             else:
                 st.write("Player Stats")
-                st.markdown(styled_players.to_html(escape=False, index=False, bold_headers=True), unsafe_allow_html=True)
+                st.markdown(
+                    styled_players.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True
+                )
         else:
             st.write("No player data available for the selected team.")
 
@@ -1248,18 +577,9 @@ def main():
         st.header("Scoring Trends")
         _, _, _, _, _, df_team_stats, _, _, _ = load_player_data()
         season_ids = df_team_stats['season_id'].unique()
-        default_season = 2023
-        season_range = st.slider(
-            "Select Season Range",
-            min_value=int(season_ids.min()),
-            max_value=int(season_ids.max()),
-            value=(default_season, default_season),
-            key="scoring_trends_season_range",
-        )
-
+        season_range = st.slider("Select Season Range", min_value=int(season_ids.min()), max_value=int(season_ids.max()), value=(2023, 2023), key="scoring_trends_season_range")
         df_team_stats = df_team_stats[(df_team_stats["season_id"] >= season_range[0]) & (df_team_stats["season_id"] <= season_range[1])]
         alt_chart, alt_chart2 = plot_home_away_goals(df_team_stats)
-
         st.altair_chart(alt_chart, use_container_width=True)
         st.altair_chart(alt_chart2, use_container_width=True)
 
