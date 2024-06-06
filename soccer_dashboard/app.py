@@ -1729,30 +1729,45 @@ def highlight_categorical(val, color_mapping):
 #     template_file,
 # )
 
+import streamlit as st
+import pandas as pd
+
 
 def main():
-    st.title("Soccer Dashboard")
+    if "data_loaded" not in st.session_state:
+        st.session_state.data_loaded = False
 
-    # Button to load data
     if st.button("Load Data"):
         (
-            st.session_state.df1,
-            st.session_state.df_players,
-            st.session_state.df_players_summary,
-            st.session_state.df_summary_teams,
-            st.session_state.df_shots,
-            st.session_state.df_team_stats,
-            st.session_state.df_players_wages,
-            st.session_state.df_xT,
-            st.session_state.player_positions,
+            df1,
+            df_players,
+            df_players_summary,
+            df_summary_teams,
+            df_shots,
+            df_team_stats,
+            df_players_wages,
+            df_xT,
+            _,
         ) = load_player_data()
-        st.session_state.team_badges, st.session_state.player_images = get_badges()
-        st.session_state.team_to_id_dict = get_team_to_id_mapping()
-        st.success("Data Loaded Successfully!")
 
-    # Check if data is loaded
-    if "df_team_stats" in st.session_state:
-        df = st.session_state.df1
+        team_badges, player_images = get_badges()
+        team_to_id_dict = get_team_to_id_mapping()
+
+        st.session_state.data_loaded = True
+        st.session_state.df1 = df1
+        st.session_state.df_players = df_players
+        st.session_state.df_players_summary = df_players_summary
+        st.session_state.df_summary_teams = df_summary_teams
+        st.session_state.df_shots = df_shots
+        st.session_state.df_team_stats = df_team_stats
+        st.session_state.df_players_wages = df_players_wages
+        st.session_state.df_xT = df_xT
+        st.session_state.team_badges = team_badges
+        st.session_state.player_images = player_images
+        st.session_state.team_to_id_dict = team_to_id_dict
+
+    if st.session_state.data_loaded:
+        df = st.session_state.df1.copy()
 
         df = df[
             [
@@ -1896,7 +1911,7 @@ def main():
         with tab2:
             st.header("Team Stats")
             df_team_stats = st.session_state.df_team_stats
-            df_team_summary = st.session_state.df_summary_teams
+            df_team_summary = st.session_state.df_team_summary
 
             season_ids = df_team_stats["season_id"].unique()
             default_season = 2023
@@ -1923,9 +1938,11 @@ def main():
         with tab3:
             st.header("Player Stats")
             df_players = st.session_state.df_players
-            df_xT = st.session_state.df_xT
-            df_shots = st.session_state.df_shots
             df_players_summary = st.session_state.df_players_summary
+            df_shots = st.session_state.df_shots
+            df_xT = st.session_state.df_xT
+            team_badges = st.session_state.team_badges
+            player_images = st.session_state.player_images
 
             all_season_ids = ["All"] + sorted(
                 df_players["season_id"].unique(), reverse=True
@@ -1968,11 +1985,7 @@ def main():
                 df_players = df_players[df_players["position"] == position]
 
             df_players_matches, df_players_summary_merge, _ = feature_engineering(
-                df_players,
-                df_xT,
-                df_shots,
-                st.session_state.team_badges,
-                st.session_state.player_images,
+                df_players, df_xT, df_shots, team_badges, player_images
             )
 
             df_players_matches["badge"] = df_players_matches.apply(
@@ -2274,6 +2287,7 @@ def main():
 
         with tab4:
             st.header("Chance Creation")
+
             df_shots = st.session_state.df_shots
 
             season_ids = sorted(df_shots["season_id"].unique(), reverse=True)
@@ -2332,12 +2346,8 @@ def main():
             df_shots = df_shots[df_shots["matches"] >= min_games]
             df_shots = df_shots.drop(columns=["matches"])
 
-            df_shots = add_badges(
-                df_shots, st.session_state.team_badges, playerwise=True
-            )
-            df_shots_team = add_badges(
-                df_shots_team, st.session_state.team_badges, playerwise=False
-            )
+            df_shots = add_badges(df_shots, team_badges, playerwise=True)
+            df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
 
             team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
@@ -2356,6 +2366,7 @@ def main():
 
         with tab5:
             st.header("Team Players")
+
             df_players_wages = st.session_state.df_players_wages
 
             team = st.selectbox(
@@ -2396,6 +2407,7 @@ def main():
 
         with tab6:
             st.header("Scoring Trends")
+
             df_team_stats = st.session_state.df_team_stats
 
             season_ids = df_team_stats["season_id"].unique()
@@ -2417,8 +2429,6 @@ def main():
 
             st.altair_chart(alt_chart, use_container_width=True)
             st.altair_chart(alt_chart2, use_container_width=True)
-    else:
-        st.warning("Please load the data first.")
 
 
 if __name__ == "__main__":
