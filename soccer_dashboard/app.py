@@ -1731,31 +1731,43 @@ def highlight_categorical(val, color_mapping):
 
 
 def main():
-    st.markdown(
-        f'<p style="font-family:{fm_rubik}; font-size: 56px; color: wheat;">English Premier League Dashboard</p>',
-        unsafe_allow_html=True,
-    )
+    # Load badges and team-to-id mapping
+    if "team_badges" not in st.session_state:
+        team_badges, player_images = get_badges()
+        st.session_state.team_badges = team_badges
+        st.session_state.player_images = player_images
 
-    if "df1" not in st.session_state:
-        if st.button("Load Data"):
-            st.session_state.team_badges, st.session_state.player_images = get_badges()
-            st.session_state.team_to_id_dict = get_team_to_id_mapping()
-            st.session_state.data = get_data()
-            st.session_state.df1 = pd.DataFrame(st.session_state.data)
-            (
-                st.session_state.df1,
-                st.session_state.df_players,
-                st.session_state.df_players_summary,
-                st.session_state.df_summary_teams,
-                st.session_state.df_shots,
-                st.session_state.df_team_stats,
-                st.session_state.df_players_wages,
-                st.session_state.df_xT,
-                _,
-            ) = load_player_data()
+    if "team_to_id_dict" not in st.session_state:
+        team_to_id_dict = get_team_to_id_mapping()
+        st.session_state.team_to_id_dict = team_to_id_dict
+
+    # Load data when button is pressed
+    if st.button("Load Data"):
+        (
+            df1,
+            df_players,
+            df_players_summary,
+            df_summary_teams,
+            df_shots,
+            df_team_stats,
+            df_players_wages,
+            df_xT,
+            player_positions,
+        ) = load_player_data()
+
+        st.session_state.df1 = df1
+        st.session_state.df_players = df_players
+        st.session_state.df_players_summary = df_players_summary
+        st.session_state.df_summary_teams = df_summary_teams
+        st.session_state.df_shots = df_shots
+        st.session_state.df_team_stats = df_team_stats
+        st.session_state.df_players_wages = df_players_wages
+        st.session_state.df_xT = df_xT
+        st.session_state.player_positions = player_positions
 
     if "df1" in st.session_state:
         df = st.session_state.df1
+
         df = df[
             [
                 "intRank",
@@ -1785,6 +1797,11 @@ def main():
             "Goal Difference",
         ]
         df.reset_index(drop=True, inplace=True)
+
+        st.markdown(
+            f'<p style="font-family:{fm_rubik}; font-size: 56px; color: wheat;">English Premier League Dashboard</p>',
+            unsafe_allow_html=True,
+        )
 
         tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
             [
@@ -1892,8 +1909,10 @@ def main():
 
         with tab2:
             st.header("Team Stats")
-            df_team_summary = st.session_state.df_team_stats
-            season_ids = df_team_summary["season_id"].unique()
+            df_team_summary = st.session_state.df_team_summary
+            df_team_stats = st.session_state.df_team_stats
+
+            season_ids = df_team_stats["season_id"].unique()
             default_season = 2023
             season_range = st.slider(
                 "Select Season Range",
@@ -1904,7 +1923,7 @@ def main():
             )
 
             styled_team_stats = process_team_stats(
-                st.session_state.df_team_stats,
+                df_team_stats,
                 df_team_summary,
                 season_range,
                 st.session_state.team_badges,
@@ -1920,6 +1939,7 @@ def main():
             df_players = st.session_state.df_players
             df_players_summary = st.session_state.df_players_summary
             df_shots = st.session_state.df_shots
+            df_xT = st.session_state.df_xT
 
             all_season_ids = ["All"] + sorted(
                 df_players["season_id"].unique(), reverse=True
@@ -1963,7 +1983,7 @@ def main():
 
             df_players_matches, df_players_summary_merge, _ = feature_engineering(
                 df_players,
-                st.session_state.df_xT,
+                df_xT,
                 df_shots,
                 st.session_state.team_badges,
                 st.session_state.player_images,
@@ -2353,6 +2373,7 @@ def main():
             st.header("Team Players")
 
             df_players_wages = st.session_state.df_players_wages
+
             team = st.selectbox(
                 "Select a team", sorted(df["Team"].unique()), placeholder="Arsenal"
             )
