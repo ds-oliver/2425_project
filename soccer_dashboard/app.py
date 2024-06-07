@@ -577,6 +577,7 @@ def add_badges(df, badges, playerwise=True):
                         ("color", "floralwhite"),
                         ("border-color", "#ffbd6d"),
                         ("text-align", "center"),
+                        ("border-weight", "3px"),
                     ],
                 },
                 {
@@ -1062,6 +1063,7 @@ def render_player_table(players, player_wages):
                         ("color", "floralwhite"),
                         ("border-color", "#ffbd6d"),
                         ("text-align", "center"),
+                        ("border-weight", "3px"),
                     ],
                 },
                 {
@@ -1125,6 +1127,7 @@ def render_player_table(players, player_wages):
                         ("color", "floralwhite"),
                         ("border-color", "#ffbd6d"),
                         ("text-align", "center"),
+                        ("border-weight", "3px"),
                     ],
                 },
                 {
