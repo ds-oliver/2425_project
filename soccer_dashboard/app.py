@@ -298,7 +298,7 @@ def feature_engineering(
         np.ceil
     )
 
-    df_players_matches["badge"] = df_players_matches["team"].map(team_badges)
+    df_players_matches["img"] = df_players_matches["team"].map(team_badges)
     df_players_matches["player_image"] = df_players_matches["player"].map(
         player_images_dict
     )
@@ -346,7 +346,7 @@ def feature_engineering(
 
     df_situations = df_situations[
         [
-            "badge",
+            "img",
             "player",
             "position",
             "90s",
@@ -367,7 +367,7 @@ def feature_engineering(
     ]
 
     df_situations.columns = [
-        "badge",
+        "img",
         "player",
         "pos",
         "90s",
@@ -388,7 +388,7 @@ def feature_engineering(
 
     df_players_merge = df_players_merge[
         [
-            "badge",
+            "img",
             "player_image",
             "player",
             "position",
@@ -438,7 +438,7 @@ def feature_engineering(
 
     df_players_merge = df_players_merge[
         [
-            "badge",
+            "img",
             "player_image",
             "player",
             "position",
@@ -478,7 +478,7 @@ def feature_engineering(
 # define a function that adds badges to a df and returns a styled df with badges
 def add_badges(df, badges, playerwise=True):
     # Add badges to the df
-    df["badge"] = df["team"].map(badges)
+    df["img"] = df["team"].map(badges)
 
     # Create a copy of the df
     df_badges = df.copy()
@@ -489,19 +489,19 @@ def add_badges(df, badges, playerwise=True):
 
     # Determine the order of the columns
     if playerwise:
-        columns_order = ["badge", "player", "position", "matches", "Open Play xG"] + [
+        columns_order = ["img", "player", "position", "matches", "Open Play xG"] + [
             col
             for col in df_badges.columns
             if col
-            not in ["badge", "player", "position", "team", "matches", "Open Play xG"]
+            not in ["img", "player", "position", "team", "matches", "Open Play xG"]
         ]
         color_mapping = get_color_mapping(df["position"].unique())
 
     else:
-        columns_order = ["badge", "team", "Open Play xG"] + [
+        columns_order = ["img", "team", "Open Play xG"] + [
             col
             for col in df_badges.columns
-            if col not in ["badge", "team", "Open Play xG"]
+            if col not in ["img", "team", "Open Play xG"]
         ]
 
     # Remove "matches" if it is not in the DataFrame
@@ -512,7 +512,7 @@ def add_badges(df, badges, playerwise=True):
     df_badges = df_badges[columns_order]
 
     # Format the badge column
-    df_badges["badge"] = df_badges["badge"].apply(
+    df_badges["img"] = df_badges["img"].apply(
         lambda x: f'<img src="{x}" style="width: 32px; height: 32px;">'
     )
 
@@ -523,7 +523,7 @@ def add_badges(df, badges, playerwise=True):
     # Create a styled df with badges
     styled_df_badges = (
         df_badges.style.set_properties(
-            subset=categorical_columns.difference(["badge", "position"]),
+            subset=categorical_columns.difference(["img", "position"]),
             **{
                 "text-align": "left",
                 "font-family": fm_rubik,
@@ -543,7 +543,7 @@ def add_badges(df, badges, playerwise=True):
             },
         )
         .set_properties(
-            subset=["badge"],
+            subset=["img"],
             **{
                 "text-align": "center",
                 "font-family": fm_rubik,
@@ -1398,11 +1398,11 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
 
     pd.set_option("display.float_format", lambda x: "%.1f" % x)
 
-    team_df["badge"] = team_df["team"].map(team_badges)
+    team_df["img"] = team_df["team"].map(team_badges)
 
     # Aggregate team_df by team and season
     agg_funcs = {
-        "badge": "first",  # Get the first badge
+        "img": "first",  # Get the first badge
         "points": "sum",
         "xPoints": "sum",
         "goals": "sum",
@@ -1431,7 +1431,7 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
 
     # Further aggregation if needed
     agg_funcs_final = {
-        "badge": "first",
+        "img": "first",
         "points": "sum",
         "xPoints": "sum",
         "goals": "sum",
@@ -1457,13 +1457,13 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
     )
 
     # Format badge column
-    team_stats["badge"] = team_stats["badge"].apply(
+    team_stats["img"] = team_stats["img"].apply(
         lambda x: f'<img src="{x}" width="32">'
     )
 
     # Reorder columns to have badge as the first column
     team_stats = team_stats[
-        ["badge"] + [col for col in team_stats.columns if col != "badge"]
+        ["img"] + [col for col in team_stats.columns if col != "img"]
     ]
 
     # Calculate goal difference
@@ -1514,7 +1514,7 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
 
     # Reorder columns to have badge as the first column
     team_stats = team_stats[
-        ["badge"] + [col for col in team_stats.columns if col != "badge"]
+        ["img"] + [col for col in team_stats.columns if col != "img"]
     ]
 
     # drop ppda_against, deep_completions_allowed columns
@@ -1754,7 +1754,7 @@ def main():
     df.columns = [
         "Rank",
         "Points",
-        "Badge",
+        "img",
         "Team",
         "Played",
         "Wins",
@@ -1779,8 +1779,8 @@ def main():
             unsafe_allow_html=True,
         )
 
-        df["Badge"] = df.apply(
-            lambda row: f'<img src="{row["Badge"]}" width="32">', axis=1
+        df["img"] = df.apply(
+            lambda row: f'<img src="{row["img"]}" width="32">', axis=1
         )
         df["Goal Difference"] = df["Goal Difference"].astype(int)
         df["Goals Against"] = df["Goals Against"].astype(int)
@@ -1941,13 +1941,13 @@ def main():
             df_players, df_xT, df_shots, team_badges, player_images
         )
 
-        df_players_matches["badge"] = df_players_matches.apply(
-            lambda row: f'<img src="{row["badge"]}" width="32">', axis=1
+        df_players_matches["img"] = df_players_matches.apply(
+            lambda row: f'<img src="{row["img"]}" width="32">', axis=1
         )
         df_players_matches["player_image"] = df_players_matches["player_image"].apply(lambda x: f'<img src="{x}" width="32">')
 
-        df_players_summary_merge["badge"] = df_players_summary_merge.apply(
-            lambda row: f'<img src="{row["badge"]}" width="32">', axis=1
+        df_players_summary_merge["img"] = df_players_summary_merge.apply(
+            lambda row: f'<img src="{row["img"]}" width="32">', axis=1
         )
         df_players_summary_merge["player_image"] = df_players_summary_merge["player_image"].apply(lambda x: f'<img src="{x}" width="32">')
 
@@ -1955,7 +1955,7 @@ def main():
             [
                 "player_image",
                 "player",
-                "badge",
+                "img",
                 "position",
                 "starts",
                 "Apps",
@@ -1984,7 +1984,7 @@ def main():
 
         df_players_summary_merge = df_players_summary_merge[
             [
-                "badge",
+                "img",
                 "player",
                 "position",
                 "starts",
