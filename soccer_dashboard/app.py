@@ -1568,7 +1568,7 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
                         ("color", "floralwhite"),
                         ("border-color", "#ffbd6d"),
                         ("text-align", "center"),
-                        ("border-weight", "1px"),
+                        ("border-weight", "3px"),
                     ],
                 },
                 {
