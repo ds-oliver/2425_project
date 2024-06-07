@@ -1496,7 +1496,7 @@ def process_team_stats(df, df_team_summary, season_range, team_badges):
 
     cols_to_keep = [
         'team',
-        'badge',
+        'img',
         'points',
         'xPoints',
         'goals',
