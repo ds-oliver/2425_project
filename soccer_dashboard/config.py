@@ -46,13 +46,14 @@ fm_roboto = FontManager(
 )
 
 fm_roboto = fm_roboto.prop
-# ofl/inter
-fm_inter = FontManager(
-    "https://raw.githubusercontent.com/google/fonts/main/ofl/"
-    "inter/Inter[slnt,wght].ttf"
-)
 
-fm_inter = fm_inter.prop
+# # ofl/inter
+# fm_inter = FontManager(
+#     "https://raw.githubusercontent.com/google/fonts/main/ofl/"
+#     "inter/Inter[slnt,wght].ttf"
+# )
+
+# fm_inter = fm_inter.prop
 
 local_fontpath = "/Users/hogan/Library/CloudStorage/Dropbox/Mac/Documents/GitHub/st_fantrax_dashboard/fonts/DylanCondensed-Medium.ttf"
 
