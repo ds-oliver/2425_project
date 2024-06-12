@@ -812,10 +812,18 @@ def transform_shot_data(df_shots):
 
 @st.cache_data
 def transform_shot_data_assist(df_shots):
+    required_columns = ["assist_player", "team", "situation", "body_part", "zone_y", "result", "xg", "game"]
+    
+    # Check if all required columns are in the DataFrame
+    missing_columns = [col for col in required_columns if col not in df_shots.columns]
+    if missing_columns:
+        logging.error(f"Missing columns in DataFrame: {missing_columns}")
+        return None, None
+
     # Calculate the total xG, the count of shots, and the count of unique games for each group
     grouped_data = (
         df_shots.groupby(
-            ["assist_player", "team", "position", "situation", "body_part", "zone_y", "result"]
+            ["assist_player", "team", "situation", "body_part", "zone_y", "result"]
         )
         .agg(
             total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
@@ -824,9 +832,9 @@ def transform_shot_data_assist(df_shots):
         .reset_index()
     )
 
-    # Calculate matches per assist_player, team, and position
+    # Calculate matches per assist_player and team
     matches_data = (
-        df_shots.groupby(["assist_player", "team", "position"])
+        df_shots.groupby(["assist_player", "team"])
         .agg(matches=pd.NamedAgg(column="game", aggfunc="nunique"))
         .reset_index()
     )
@@ -836,7 +844,7 @@ def transform_shot_data_assist(df_shots):
 
     # Pivot the data for situations
     situation_pivot = grouped_data.pivot_table(
-        index=["assist_player", "team", "position"],
+        index=["assist_player", "team"],
         columns="situation",
         values="per_shot_xg",
         fill_value=0,
@@ -846,7 +854,7 @@ def transform_shot_data_assist(df_shots):
 
     # Pivot the data for body parts
     body_part_pivot = grouped_data.pivot_table(
-        index=["assist_player", "team", "position"],
+        index=["assist_player", "team"],
         columns="body_part",
         values="per_shot_xg",
         fill_value=0,
@@ -856,7 +864,7 @@ def transform_shot_data_assist(df_shots):
 
     # Pivot the data for zone_y
     zone_y_pivot = grouped_data.pivot_table(
-        index=["assist_player", "team", "position"],
+        index=["assist_player", "team"],
         columns="zone_y",
         values="per_shot_xg",
         fill_value=0,
@@ -866,7 +874,7 @@ def transform_shot_data_assist(df_shots):
 
     # Pivot the data for result
     result_pivot = grouped_data.pivot_table(
-        index=["assist_player", "team", "position"],
+        index=["assist_player", "team"],
         columns="result",
         values="per_shot_xg",
         fill_value=0,
@@ -874,22 +882,22 @@ def transform_shot_data_assist(df_shots):
     result_pivot.columns = [f"{col} xG" for col in result_pivot.columns]
     result_pivot.reset_index(inplace=True)
 
-    # Merge the pivot tables on assist_player, team, and position
+    # Merge the pivot tables on assist_player and team
     assistwise_result = situation_pivot.merge(
-        body_part_pivot, on=["assist_player", "team", "position"], how="outer"
+        body_part_pivot, on=["assist_player", "team"], how="outer"
     )
     assistwise_result = assistwise_result.merge(
-        zone_y_pivot, on=["assist_player", "team", "position"], how="outer"
+        zone_y_pivot, on=["assist_player", "team"], how="outer"
     )
 
     # Merge the result_pivot with assistwise_result
     assistwise_result = assistwise_result.merge(
-        result_pivot, on=["assist_player", "team", "position"], how="outer"
+        result_pivot, on=["assist_player", "team"], how="outer"
     )
 
     # Add matches to the assistwise_result
     assistwise_result = assistwise_result.merge(
-        matches_data, on=["assist_player", "team", "position"], how="left"
+        matches_data, on=["assist_player", "team"], how="left"
     )
 
     # Calculate teamwise data
@@ -957,7 +965,6 @@ def transform_shot_data_assist(df_shots):
     teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
 
     return assistwise_result, teamwise_result
-
 
 @st.cache_data
 # plot home v away goals for all teams data using hexbin plot
@@ -2460,6 +2467,12 @@ def main():
 
         df_shots = add_badges(df_shots, team_badges, playerwise=True)
         df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
+
+        df_shots_assists = df_shots_assists[df_shots_assists["matches"] >= min_games]
+        df_shots_assists = df_shots_assists.drop(columns=["matches"])
+
+        df_shots_assists = add_badges(df_shots_assists, team_badges, playerwise=True)
+        df_shots_assists_team = add_badges(df_shots_assists_team, team_badges, playerwise=False)
 
         team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
