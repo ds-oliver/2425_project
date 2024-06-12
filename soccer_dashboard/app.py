@@ -479,9 +479,12 @@ def ensure_unique_columns(df):
     """
     Ensure the DataFrame columns are unique by appending a suffix to duplicates.
     """
-    df.columns = pd.io.parsers.ParserBase({"names": df.columns})._maybe_dedup_names(
-        df.columns
-    )
+    cols = pd.Series(df.columns)
+    for dup in cols[cols.duplicated()].unique():
+        cols[cols[cols == dup].index.values.tolist()] = [
+            f"{dup}_{i}" if i != 0 else dup for i in range(sum(cols == dup))
+        ]
+    df.columns = cols
     return df
 
 
