@@ -662,7 +662,8 @@ def add_badges(df, badges, playerwise=True):
     if playerwise and "position" in df_badges.columns:
         color_mapping = get_color_mapping(df_badges["position"].unique())
         styled_df_badges = styled_df_badges.applymap(
-            lambda x: f"background-color: {color_mapping[x]}", subset=["position"]
+            lambda x: f"color: {color_mapping.get(x, 'black')}",
+            subset=["position"],
         )
 
     return styled_df_badges
