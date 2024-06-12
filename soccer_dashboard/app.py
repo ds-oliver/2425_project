@@ -547,50 +547,123 @@ def add_badges(df, badges, playerwise=True):
         )
     )
 
+    # Get numerical and categorical columns
+    numerical_columns = df_badges.select_dtypes(include="number").columns
+    categorical_columns = df_badges.select_dtypes(exclude="number").columns
+
     # Create a styled df with badges
-    styled_df_badges = df_badges.style.set_table_styles(
-        [
-            {
-                "selector": "th",
-                "props": [
-                    ("font-family", "Arial, sans-serif"),
-                    ("background-color", "#070d1d"),
-                    ("color", "floralwhite"),
-                    ("border-color", "#ffbd6d"),
-                    ("text-align", "center"),
-                    ("border-weight", "3px"),
-                ],
+    styled_df_badges = (
+        df_badges.style.set_properties(
+            subset=categorical_columns.difference(["img", "position"]),
+            **{
+                "text-align": "left",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
             },
-            {
-                "selector": "td:hover",
-                "props": [
-                    ("background-color", "black"),
-                    ("color", "gold"),
-                    ("border-color", "#ffbd6d"),
-                ],
+        )
+        .set_properties(
+            subset=numerical_columns,
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
             },
-            {
-                "selector": ".blank.level0",
-                "props": [
-                    ("background-color", "black"),
-                    ("color", "floralwhite"),
-                    ("border-color", "#ffbd6d"),
-                    ("text-align", "center"),
-                ],
+        )
+        .set_properties(
+            subset=["img"],
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
             },
-            {
-                "selector": ".blank.hover",
-                "props": [
-                    ("background-color", "black"),
-                    ("color", "black"),
-                    ("border-color", "#ffbd6d"),
-                    ("text-align", "center"),
-                ],
-            },
-        ]
-    ).format(
-        subset=df_badges.select_dtypes(include="number").columns, formatter="{:.2f}"
+        )
     )
+
+    if "position" in df_badges.columns:
+        styled_df_badges = styled_df_badges.set_properties(
+            subset=["position"],
+            **{
+                "text-align": "center",
+                "font-family": fm_rubik,
+                "background-color": "#0d0b17",
+                "color": "gainsboro",
+                "border-color": "#ffbd6d",
+            },
+        )
+
+    styled_df_badges = (
+        styled_df_badges.set_table_styles(
+            [
+                {
+                    "selector": "th",
+                    "props": [
+                        ("font-family", fm_rubik),
+                        ("background-color", "#070d1d"),
+                        ("color", "floralwhite"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                        ("border-weight", "3px"),
+                    ],
+                },
+                {
+                    "selector": "td:hover",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "gold"),
+                        ("border-color", "#ffbd6d"),
+                    ],
+                },
+                {
+                    "selector": ".blank.level0",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "floralwhite"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                    ],
+                },
+                {
+                    "selector": ".blank.hover",
+                    "props": [
+                        ("background-color", "black"),
+                        ("color", "black"),
+                        ("border-color", "#ffbd6d"),
+                        ("text-align", "center"),
+                    ],
+                },
+            ]
+        )
+        # Highlight the maximum value in each column
+        .highlight_max(
+            subset=numerical_columns,
+            props=highlight_max_props,
+        )
+        # Highlight the minimum value in each column
+        .highlight_min(
+            subset=numerical_columns,
+            props=highlight_min_props,
+        )
+        .format(subset=numerical_columns, formatter="{:.2f}")
+        # Format numerical columns with text gradient
+        .text_gradient(
+            subset=numerical_columns,
+            cmap="coolwarm",
+        )
+        .hide(axis="index")
+    )
+
+    # Apply color mapping to position column if playerwise
+    if playerwise and "position" in df_badges.columns:
+        color_mapping = get_color_mapping(df_badges["position"].unique())
+        styled_df_badges = styled_df_badges.applymap(
+            lambda x: f"background-color: {color_mapping[x]}", subset=["position"]
+        )
 
     return styled_df_badges
 
@@ -2421,7 +2494,7 @@ def main():
 
         if position != "All":
             df_shots = df_shots[df_shots["position"] == position]
-        
+
         df_shots_copy = df_shots.copy()
 
         df_shots, df_shots_team = transform_shot_data(df_shots)
