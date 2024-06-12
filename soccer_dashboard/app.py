@@ -2452,6 +2452,7 @@ def main():
         # Create a toggle for instead getting shot creators ie shot assistors
         shot_assistors = st.radio("Show shot assistors", ["No", "Yes"], key="shot_assistors")
         
+        default_matches_value = int(0.3 * max(df_shots["matches"]))
         min_games = st.number_input(
             "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
         )
@@ -2466,7 +2467,7 @@ def main():
             df_shots_assists = add_badges(df_shots_assists, team_badges, playerwise=True)
             df_shots_assists_team = add_badges(df_shots_assists_team, team_badges, playerwise=False)
 
-        default_matches_value = int(0.3 * max(df_shots["matches"]))
+
 
 
 
