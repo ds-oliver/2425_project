@@ -668,7 +668,7 @@ def transform_shot_data(df_shots):
     # Calculate the total xG, the count of shots, and the count of unique games for each group
     grouped_data = (
         df_shots.groupby(
-            ["player", "team", "position", "situation", "body_part", "zone_y", "result"]
+            ["player", "team", "position", "situation", "body_part", "zone_y"]
         )
         .agg(
             total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
