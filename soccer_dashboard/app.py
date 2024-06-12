@@ -13,7 +13,10 @@ from pandas.io.formats.style import Styler
 import os
 import altair as alt
 import logging
+from mplsoccer import FontManager
 
+
+import urllib.error
 from config import (
     API_KEY,
     EPL_ID,
@@ -28,6 +31,12 @@ from config import (
     # DylanCondensed,
     FenomenSans,
 )
+
+try:
+    fm_inter = FontManager("https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter[slnt,wght].ttf")
+except urllib.error.HTTPError as e:
+    logging.error(f"Failed to download font: {e}")
+
 
 # setup logging
 logging.basicConfig(level=logging.INFO)
