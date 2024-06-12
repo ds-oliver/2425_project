@@ -475,12 +475,22 @@ def feature_engineering(
 
 # @st.cache_data
 # define a function that adds badges to a df and returns a styled df with badges
+def ensure_unique_columns(df):
+    """
+    Ensure the DataFrame columns are unique by appending a suffix to duplicates.
+    """
+    df.columns = pd.io.parsers.ParserBase({"names": df.columns})._maybe_dedup_names(
+        df.columns
+    )
+    return df
+
+
 def add_badges(df, badges, playerwise=True):
     # Add badges to the df
     df["img"] = df["team"].map(badges)
 
-    # Create a copy of the df
-    df_badges = df.copy()
+    # Ensure unique columns
+    df_badges = ensure_unique_columns(df.copy())
 
     # Log the columns of the DataFrame for debugging
     st.write("DataFrame columns before processing:", df_badges.columns.tolist())
@@ -492,14 +502,17 @@ def add_badges(df, badges, playerwise=True):
     # Determine the order of the columns
     if playerwise:
         if "assist_player" in df_badges.columns:
-            columns_order = ["img", "assist_player", "team", "Open Play xG"] + [
+            columns_order = ["img", "assist_player", "Open Play xG"] + [
                 col
                 for col in df_badges.columns
-                if col
-                not in ["img", "assist_player", "team", "Open Play xG"]
+                if col not in ["img", "assist_player", "team", "Open Play xG"]
             ]
+            if "position" in df_badges.columns:
+                columns_order.insert(
+                    3, "position"
+                )  # Insert position column if it exists
         else:
-            columns_order = ["img", "player", "position", "team", "Open Play xG"] + [
+            columns_order = ["img", "player", "position", "Open Play xG"] + [
                 col
                 for col in df_badges.columns
                 if col not in ["img", "player", "position", "team", "Open Play xG"]
@@ -524,7 +537,11 @@ def add_badges(df, badges, playerwise=True):
 
     # Format the badge column
     df_badges["img"] = df_badges["img"].apply(
-        lambda x: f'<img src="{x}" style="width: 32px; height: 32px;">'
+        lambda x: (
+            f'<img src="{x}" style="width: 32px; height: 32px;">'
+            if pd.notnull(x)
+            else ""
+        )
     )
 
     # Get numerical and categorical columns
@@ -636,184 +653,19 @@ def add_badges(df, badges, playerwise=True):
     return styled_df_badges
 
 
-def transform_shots_data(df_shots):
-    print(f"Columns_in_df_shots: {list(df_shots.columns)}")
-
-    # fill nans in assist_player with 'Self'
-    df_shots["assist_player"].fillna("Self", inplace=True)
-
-    # groupby player, result, situation, body_part, zone_y, opponent_name, h_a, season_id, assist_player and count the number of shot_id, sum xg_shots
-    df_shots = df_shots.groupby(
-        [
-            "player_id",
-            "player",
-            "result",
-            "situation",
-            "body_part",
-            "zone_y",
-            "opponent_name",
-            "is_home_team",
-            "season_id",
-            # "assist_player",
-        ],
-        as_index=False,
-    ).agg({"shot_id": "count", "xg": "sum"})
-    df_shots.rename(columns={"shot_id": "shots"}, inplace=True)
-
-    return df_shots
-
-@st.cache_data
-def transform_shot_data(df_shots):
-    # Calculate the total xG, the count of shots, and the count of unique games for each group
-    grouped_data = (
-        df_shots.groupby(
-            ["player", "team", "position", "situation", "body_part", "zone_y", "result"]
-        )
-        .agg(
-            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
-            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
-        )
-        .reset_index()
-    )
-
-    # Calculate matches per player, team, and position
-    matches_data = (
-        df_shots.groupby(["player", "team", "position"])
-        .agg(matches=pd.NamedAgg(column="game", aggfunc="nunique"))
-        .reset_index()
-    )
-
-    # Calculate the per shot xG
-    grouped_data["per_shot_xg"] = grouped_data["total_xg"] / grouped_data["shot_count"]
-
-    # Pivot the data for situations
-    situation_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="situation",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    situation_pivot.columns = [f"{col} xG" for col in situation_pivot.columns]
-    situation_pivot.reset_index(inplace=True)
-
-    # Pivot the data for body parts
-    body_part_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="body_part",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    body_part_pivot.columns = [f"{col} xG" for col in body_part_pivot.columns]
-    body_part_pivot.reset_index(inplace=True)
-
-    # Pivot the data for zone_y
-    zone_y_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="zone_y",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
-    zone_y_pivot.reset_index(inplace=True)
-
-    # Pivot the data for result
-    result_pivot = grouped_data.pivot_table(
-        index=["player", "team", "position"],
-        columns="result",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    result_pivot.columns = [f"{col} xG" for col in result_pivot.columns]
-    result_pivot.reset_index(inplace=True)
-
-    # Merge the pivot tables on player, team, and position
-    playerwise_result = situation_pivot.merge(
-        body_part_pivot, on=["player", "team", "position"], how="outer"
-    )
-    playerwise_result = playerwise_result.merge(
-        zone_y_pivot, on=["player", "team", "position"], how="outer"
-    )
-
-    # Merge the result_pivot with playerwise_result
-    playerwise_result = playerwise_result.merge(
-        result_pivot, on=["player", "team", "position"], how="outer"
-    )
-
-    # Add matches to the playerwise_result
-    playerwise_result = playerwise_result.merge(
-        matches_data, on=["player", "team", "position"], how="left"
-    )
-
-    # Calculate teamwise data
-    team_grouped_data = (
-        df_shots.groupby(["team", "situation", "body_part", "zone_y", "result"])
-        .agg(
-            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
-            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
-        )
-        .reset_index()
-    )
-
-    # Calculate the per shot xG
-    team_grouped_data["per_shot_xg"] = (
-        team_grouped_data["total_xg"] / team_grouped_data["shot_count"]
-    )
-
-    # Pivot the data for situations
-    team_situation_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="situation",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_situation_pivot.columns = [f"{col} xG" for col in team_situation_pivot.columns]
-    team_situation_pivot.reset_index(inplace=True)
-
-    # Pivot the data for body parts
-    team_body_part_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="body_part",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_body_part_pivot.columns = [f"{col} xG" for col in team_body_part_pivot.columns]
-    team_body_part_pivot.reset_index(inplace=True)
-
-    # Pivot the data for zone_y
-    team_zone_y_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="zone_y",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
-    team_zone_y_pivot.reset_index(inplace=True)
-
-    # Pivot the data for result
-    team_result_pivot = team_grouped_data.pivot_table(
-        index=["team"],
-        columns="result",
-        values="per_shot_xg",
-        fill_value=0,
-    )
-    team_result_pivot.columns = [f"{col} xG" for col in team_result_pivot.columns]
-    team_result_pivot.reset_index(inplace=True)
-
-    # Merge the pivot tables on team
-    teamwise_result = team_situation_pivot.merge(
-        team_body_part_pivot, on="team", how="outer"
-    )
-    teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
-
-    # Merge the result_pivot with teamwise_result
-    teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
-
-    return playerwise_result, teamwise_result
-
 @st.cache_data
 def transform_shot_data_assist(df_shots):
-    required_columns = ["assist_player", "team", "situation", "body_part", "zone_y", "result", "xg", "game"]
-    
+    required_columns = [
+        "assist_player",
+        "team",
+        "situation",
+        "body_part",
+        "zone_y",
+        "result",
+        "xg",
+        "game",
+    ]
+
     # Check if all required columns are in the DataFrame
     missing_columns = [col for col in required_columns if col not in df_shots.columns]
     if missing_columns:
@@ -965,6 +817,183 @@ def transform_shot_data_assist(df_shots):
     teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
 
     return assistwise_result, teamwise_result
+
+
+def transform_shots_data(df_shots):
+    print(f"Columns_in_df_shots: {list(df_shots.columns)}")
+
+    # fill nans in assist_player with 'Self'
+    df_shots["assist_player"].fillna("Self", inplace=True)
+
+    # groupby player, result, situation, body_part, zone_y, opponent_name, h_a, season_id, assist_player and count the number of shot_id, sum xg_shots
+    df_shots = df_shots.groupby(
+        [
+            "player_id",
+            "player",
+            "result",
+            "situation",
+            "body_part",
+            "zone_y",
+            "opponent_name",
+            "is_home_team",
+            "season_id",
+            # "assist_player",
+        ],
+        as_index=False,
+    ).agg({"shot_id": "count", "xg": "sum"})
+    df_shots.rename(columns={"shot_id": "shots"}, inplace=True)
+
+    return df_shots
+
+
+@st.cache_data
+def transform_shot_data(df_shots):
+    # Calculate the total xG, the count of shots, and the count of unique games for each group
+    grouped_data = (
+        df_shots.groupby(
+            ["player", "team", "position", "situation", "body_part", "zone_y", "result"]
+        )
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate matches per player, team, and position
+    matches_data = (
+        df_shots.groupby(["player", "team", "position"])
+        .agg(matches=pd.NamedAgg(column="game", aggfunc="nunique"))
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    grouped_data["per_shot_xg"] = grouped_data["total_xg"] / grouped_data["shot_count"]
+
+    # Pivot the data for situations
+    situation_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    situation_pivot.columns = [f"{col} xG" for col in situation_pivot.columns]
+    situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    body_part_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    body_part_pivot.columns = [f"{col} xG" for col in body_part_pivot.columns]
+    body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    zone_y_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
+    zone_y_pivot.reset_index(inplace=True)
+
+    # Pivot the data for result
+    result_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    result_pivot.columns = [f"{col} xG" for col in result_pivot.columns]
+    result_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on player, team, and position
+    playerwise_result = situation_pivot.merge(
+        body_part_pivot, on=["player", "team", "position"], how="outer"
+    )
+    playerwise_result = playerwise_result.merge(
+        zone_y_pivot, on=["player", "team", "position"], how="outer"
+    )
+
+    # Merge the result_pivot with playerwise_result
+    playerwise_result = playerwise_result.merge(
+        result_pivot, on=["player", "team", "position"], how="outer"
+    )
+
+    # Add matches to the playerwise_result
+    playerwise_result = playerwise_result.merge(
+        matches_data, on=["player", "team", "position"], how="left"
+    )
+
+    # Calculate teamwise data
+    team_grouped_data = (
+        df_shots.groupby(["team", "situation", "body_part", "zone_y", "result"])
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    team_grouped_data["per_shot_xg"] = (
+        team_grouped_data["total_xg"] / team_grouped_data["shot_count"]
+    )
+
+    # Pivot the data for situations
+    team_situation_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_situation_pivot.columns = [f"{col} xG" for col in team_situation_pivot.columns]
+    team_situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    team_body_part_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_body_part_pivot.columns = [f"{col} xG" for col in team_body_part_pivot.columns]
+    team_body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    team_zone_y_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
+    team_zone_y_pivot.reset_index(inplace=True)
+
+    # Pivot the data for result
+    team_result_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_result_pivot.columns = [f"{col} xG" for col in team_result_pivot.columns]
+    team_result_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on team
+    teamwise_result = team_situation_pivot.merge(
+        team_body_part_pivot, on="team", how="outer"
+    )
+    teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
+
+    # Merge the result_pivot with teamwise_result
+    teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
+
+    return playerwise_result, teamwise_result
+
 
 @st.cache_data
 # plot home v away goals for all teams data using hexbin plot
