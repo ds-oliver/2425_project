@@ -495,9 +495,12 @@ def add_badges(df, badges, playerwise=True):
             columns_order = ["img", "assist_player", "Open Play xG"] + [
                 col
                 for col in df_badges.columns
-                if col
-                not in ["img", "assist_player", "team", "Open Play xG"]
+                if col not in ["img", "assist_player", "team", "Open Play xG"]
             ]
+            if "position" in df_badges.columns:
+                columns_order.insert(
+                    3, "position"
+                )  # Insert position column if it exists
         else:
             columns_order = ["img", "player", "position", "Open Play xG"] + [
                 col
