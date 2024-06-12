@@ -2400,6 +2400,8 @@ def main():
 
         _, _, _, _, df_shots, _, _, _, player_positions = load_player_data()
 
+        df_shots_copy = df_shots.copy()
+
         # Log shots data columns
         st.write(df_shots.columns)
 
@@ -2445,7 +2447,7 @@ def main():
 
         if shot_assistors == "Yes":
             # Call the function to get shot assistors
-            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots)
+            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots_copy)
 
         default_matches_value = int(0.3 * max(df_shots["matches"]))
 
