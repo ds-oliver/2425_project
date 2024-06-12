@@ -482,17 +482,28 @@ def add_badges(df, badges, playerwise=True):
     # Create a copy of the df
     df_badges = df.copy()
 
+    # Log the columns of the DataFrame for debugging
+    st.write("DataFrame columns before processing:", df_badges.columns.tolist())
+
     # Sort by "Open Play xG" if it exists in the DataFrame
     if "Open Play xG" in df_badges.columns:
         df_badges = df_badges.sort_values("Open Play xG", ascending=False)
 
     # Determine the order of the columns
     if playerwise:
-        columns_order = ["img", "assist_player", "position", "Open Play xG"] + [
-            col
-            for col in df_badges.columns
-            if col not in ["img", "assist_player", "position", "team", "Open Play xG"]
-        ]
+        if "assist_player" in df_badges.columns:
+            columns_order = ["img", "assist_player", "position", "Open Play xG"] + [
+                col
+                for col in df_badges.columns
+                if col
+                not in ["img", "assist_player", "position", "team", "Open Play xG"]
+            ]
+        else:
+            columns_order = ["img", "player", "position", "Open Play xG"] + [
+                col
+                for col in df_badges.columns
+                if col not in ["img", "player", "position", "team", "Open Play xG"]
+            ]
         if "matches" in df_badges.columns:
             columns_order.insert(4, "matches")  # Insert matches column if it exists
     else:
@@ -505,7 +516,8 @@ def add_badges(df, badges, playerwise=True):
     # Ensure the required columns are in the DataFrame
     missing_columns = [col for col in columns_order if col not in df_badges.columns]
     if missing_columns:
-        raise KeyError(f"Columns missing in DataFrame: {missing_columns}")
+        st.error(f"Columns missing in DataFrame: {missing_columns}")
+        return df_badges  # Return the DataFrame without processing
 
     # Reorder the columns
     df_badges = df_badges[columns_order]
