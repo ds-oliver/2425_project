@@ -2451,6 +2451,8 @@ def main():
 
         _, _, _, _, df_shots, _, _, _, player_positions = load_player_data()
 
+        df_shots_copy = df_shots.copy()
+
         # Log shots data columns
         st.write(df_shots.columns)
 
@@ -2494,8 +2496,6 @@ def main():
 
         if position != "All":
             df_shots = df_shots[df_shots["position"] == position]
-        
-        df_shots_copy = df_shots.copy()
 
         df_shots, df_shots_team = transform_shot_data(df_shots)
 
