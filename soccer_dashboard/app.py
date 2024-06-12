@@ -546,11 +546,11 @@ def add_badges(df, badges, playerwise=True):
             else ""
         )
     )
-
     # Get numerical and categorical columns
     numerical_columns = df_badges.select_dtypes(include="number").columns
     categorical_columns = df_badges.select_dtypes(exclude="number").columns
 
+    # Create a styled df with badges
     # Create a styled df with badges
     styled_df_badges = (
         df_badges.style.set_properties(
