@@ -24,11 +24,7 @@ from config import (
     EFL_LEAGUE_ONE_ID,
     SEASON,
     fm_rubik,
-    # fm_ubuntu,
-    # fm_lato,
-    # fm_roboto,
-    # fm_inter,
-    # DylanCondensed,
+
     FenomenSans,
 )
 
