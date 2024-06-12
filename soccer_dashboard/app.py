@@ -2445,7 +2445,7 @@ def main():
 
         if shot_assistors == "Yes":
             # Call the function to get shot assistors
-            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots, df_shots_team)
+            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots)
 
         default_matches_value = int(0.3 * max(df_shots["matches"]))
 
