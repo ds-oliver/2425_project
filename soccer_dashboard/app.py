@@ -2456,6 +2456,12 @@ def main():
             # Call the function to get shot assistors
             df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots_copy)
 
+            df_shots_assists = df_shots_assists[df_shots_assists["matches"] >= min_games]
+            df_shots_assists = df_shots_assists.drop(columns=["matches"])
+
+            df_shots_assists = add_badges(df_shots_assists, team_badges, playerwise=True)
+            df_shots_assists_team = add_badges(df_shots_assists_team, team_badges, playerwise=False)
+
         default_matches_value = int(0.3 * max(df_shots["matches"]))
 
         min_games = st.number_input(
@@ -2467,12 +2473,6 @@ def main():
 
         df_shots = add_badges(df_shots, team_badges, playerwise=True)
         df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
-
-        df_shots_assists = df_shots_assists[df_shots_assists["matches"] >= min_games]
-        df_shots_assists = df_shots_assists.drop(columns=["matches"])
-
-        df_shots_assists = add_badges(df_shots_assists, team_badges, playerwise=True)
-        df_shots_assists_team = add_badges(df_shots_assists_team, team_badges, playerwise=False)
 
         team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
