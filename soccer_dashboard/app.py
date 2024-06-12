@@ -28,12 +28,6 @@ from config import (
     FenomenSans,
 )
 
-try:
-    fm_inter = FontManager("https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter[slnt,wght].ttf")
-except urllib.error.HTTPError as e:
-    logging.error(f"Failed to download font: {e}")
-
-
 # setup logging
 logging.basicConfig(level=logging.INFO)
 
@@ -2228,6 +2222,9 @@ def main():
         st.header("Chance Creation")
 
         _, _, _, _, df_shots, _, _, _, player_positions = load_player_data()
+
+        # Log shots data columns
+        st.write(df_shots.columns)
 
         season_ids = sorted(df_shots["season_id"].unique(), reverse=True)
         default_season = 2023
