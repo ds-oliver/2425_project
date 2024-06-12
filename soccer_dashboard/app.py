@@ -482,17 +482,17 @@ def add_badges(df, badges, playerwise=True):
     # Create a copy of the df
     df_badges = df.copy()
 
-    # Ensure column names are unique
-    df_badges.columns = pd.io.parsers.ParserBase(
-        {"names": df_badges.columns}
-    )._maybe_dedup_names(df_badges.columns)
-
     # Log the columns of the DataFrame for debugging
     st.write("DataFrame columns before processing:", df_badges.columns.tolist())
 
     # Sort by "Open Play xG" if it exists in the DataFrame
     if "Open Play xG" in df_badges.columns:
         df_badges = df_badges.sort_values("Open Play xG", ascending=False)
+
+    # Ensure there are no duplicate columns
+    if df_badges.columns.duplicated().any():
+        st.error("DataFrame contains duplicate columns. Please ensure all columns are unique.")
+        return df_badges
 
     # Determine the order of the columns
     if playerwise:
@@ -503,9 +503,7 @@ def add_badges(df, badges, playerwise=True):
                 if col not in ["img", "assist_player", "team", "Open Play xG"]
             ]
             if "position" in df_badges.columns:
-                columns_order.insert(
-                    3, "position"
-                )  # Insert position column if it exists
+                columns_order.insert(3, "position")  # Insert position column if it exists
         else:
             columns_order = ["img", "player", "position", "Open Play xG"] + [
                 col
@@ -642,7 +640,6 @@ def add_badges(df, badges, playerwise=True):
     )
 
     return styled_df_badges
-
 
 def transform_shots_data(df_shots):
     print(f"Columns_in_df_shots: {list(df_shots.columns)}")
