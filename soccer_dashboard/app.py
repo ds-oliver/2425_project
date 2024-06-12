@@ -716,12 +716,27 @@ def transform_shot_data(df_shots):
     zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
     zone_y_pivot.reset_index(inplace=True)
 
+    # Pivot the data for result
+    result_pivot = grouped_data.pivot_table(
+        index=["player", "team", "position"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    result_pivot.columns = [f"{col} xG" for col in result_pivot.columns]
+    result_pivot.reset_index(inplace=True)
+
     # Merge the pivot tables on player, team, and position
     playerwise_result = situation_pivot.merge(
         body_part_pivot, on=["player", "team", "position"], how="outer"
     )
     playerwise_result = playerwise_result.merge(
         zone_y_pivot, on=["player", "team", "position"], how="outer"
+    )
+
+    # Merge the result_pivot with playerwise_result
+    playerwise_result = playerwise_result.merge(
+        result_pivot, on=["player", "team", "position"], how="outer"
     )
 
     # Add matches to the playerwise_result
@@ -731,7 +746,7 @@ def transform_shot_data(df_shots):
 
     # Calculate teamwise data
     team_grouped_data = (
-        df_shots.groupby(["team", "situation", "body_part", "zone_y"])
+        df_shots.groupby(["team", "situation", "body_part", "zone_y", "result"])
         .agg(
             total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
             shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
@@ -774,11 +789,24 @@ def transform_shot_data(df_shots):
     team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
     team_zone_y_pivot.reset_index(inplace=True)
 
+    # Pivot the data for result
+    team_result_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_result_pivot.columns = [f"{col} xG" for col in team_result_pivot.columns]
+    team_result_pivot.reset_index(inplace=True)
+
     # Merge the pivot tables on team
     teamwise_result = team_situation_pivot.merge(
         team_body_part_pivot, on="team", how="outer"
     )
     teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
+
+    # Merge the result_pivot with teamwise_result
+    teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
 
     return playerwise_result, teamwise_result
 
