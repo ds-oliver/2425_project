@@ -482,6 +482,11 @@ def add_badges(df, badges, playerwise=True):
     # Create a copy of the df
     df_badges = df.copy()
 
+    # Ensure column names are unique
+    df_badges.columns = pd.io.parsers.ParserBase(
+        {"names": df_badges.columns}
+    )._maybe_dedup_names(df_badges.columns)
+
     # Log the columns of the DataFrame for debugging
     st.write("DataFrame columns before processing:", df_badges.columns.tolist())
 
