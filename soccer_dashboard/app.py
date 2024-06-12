@@ -488,11 +488,24 @@ def add_badges(df, badges, playerwise=True):
 
     # Determine the order of the columns
     if playerwise:
-        columns_order = ["img", "assist_player", "position", "matches", "Open Play xG"] + [
+        columns_order = [
+            "img",
+            "assist_player",
+            "position",
+            "matches",
+            "Open Play xG",
+        ] + [
             col
             for col in df_badges.columns
             if col
-            not in ["img", "assist_player", "position", "team", "matches", "Open Play xG"]
+            not in [
+                "img",
+                "assist_player",
+                "position",
+                "team",
+                "matches",
+                "Open Play xG",
+            ]
         ]
     else:
         columns_order = ["img", "team", "Open Play xG"] + [
@@ -501,9 +514,10 @@ def add_badges(df, badges, playerwise=True):
             if col not in ["img", "team", "Open Play xG"]
         ]
 
-    # Remove "matches" if it is not in the DataFrame
-    if "matches" not in df_badges.columns and "matches" in columns_order:
-        columns_order.remove("matches")
+    # Ensure the required columns are in the DataFrame
+    missing_columns = [col for col in columns_order if col not in df_badges.columns]
+    if missing_columns:
+        raise KeyError(f"Columns missing in DataFrame: {missing_columns}")
 
     # Reorder the columns
     df_badges = df_badges[columns_order]
@@ -620,6 +634,7 @@ def add_badges(df, badges, playerwise=True):
     )
 
     return styled_df_badges
+
 
 def transform_shots_data(df_shots):
     print(f"Columns_in_df_shots: {list(df_shots.columns)}")
@@ -2436,7 +2451,6 @@ def main():
 
         # Create a toggle for instead getting shot creators ie shot assistors
         shot_assistors = st.radio("Show shot assistors", ["No", "Yes"], key="shot_assistors")
-        
         default_matches_value = int(0.3 * max(df_shots["matches"]))
         min_games = st.number_input(
             "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
