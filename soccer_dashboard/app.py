@@ -2451,6 +2451,10 @@ def main():
 
         # Create a toggle for instead getting shot creators ie shot assistors
         shot_assistors = st.radio("Show shot assistors", ["No", "Yes"], key="shot_assistors")
+        
+        min_games = st.number_input(
+            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
+        )
 
         if shot_assistors == "Yes":
             # Call the function to get shot assistors
@@ -2464,9 +2468,7 @@ def main():
 
         default_matches_value = int(0.3 * max(df_shots["matches"]))
 
-        min_games = st.number_input(
-            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
-        )
+
 
         df_shots = df_shots[df_shots["matches"] >= min_games]
         df_shots = df_shots.drop(columns=["matches"])
