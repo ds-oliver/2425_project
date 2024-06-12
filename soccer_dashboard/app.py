@@ -2431,7 +2431,10 @@ def main():
         default_team = "All"
 
         team = st.selectbox(
-            "Select a team", teams, index=teams.index(default_team), key="chance_creation_team"
+            "Select a team",
+            teams,
+            index=teams.index(default_team),
+            key="chance_creation_team",
         )
 
         if team != "All":
@@ -2441,7 +2444,10 @@ def main():
         default_position = "All"
 
         position = st.selectbox(
-            "Select a position", positions, index=positions.index(default_position), key="chance_creation_position"
+            "Select a position",
+            positions,
+            index=positions.index(default_position),
+            key="chance_creation_position",
         )
 
         if position != "All":
@@ -2450,37 +2456,46 @@ def main():
         df_shots, df_shots_team = transform_shot_data(df_shots)
 
         # Create a toggle for instead getting shot creators ie shot assistors
-        shot_assistors = st.radio("Show shot assistors", ["No", "Yes"], key="shot_assistors")
-        default_matches_value = int(0.3 * max(df_shots["matches"]))
-        min_games = st.number_input(
-            "Minimum number of games", min_value=1, max_value=max(df_shots["matches"]), value=default_matches_value, key="min_games"
+        shot_assistors = st.radio(
+            "Show shot assistors", ["No", "Yes"], key="shot_assistors"
         )
+
+        # Add filter for minimum games for df_shots
+        if shot_assistors == "No":
+            default_matches_value = int(0.3 * max(df_shots["matches"]))
+            min_games = st.number_input(
+                "Minimum number of games",
+                min_value=1,
+                max_value=max(df_shots["matches"]),
+                value=default_matches_value,
+                key="min_games",
+            )
+            df_shots = df_shots[df_shots["matches"] >= min_games]
+            df_shots = df_shots.drop(columns=["matches"])
 
         if shot_assistors == "Yes":
             # Call the function to get shot assistors
-            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots_copy)
+            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(
+                df_shots_copy
+            )
 
-            df_shots_assists = df_shots_assists[df_shots_assists["matches"] >= min_games]
-            df_shots_assists = df_shots_assists.drop(columns=["matches"])
-
-            df_shots_assists = add_badges(df_shots_assists, team_badges, playerwise=True)
-            df_shots_assists_team = add_badges(df_shots_assists_team, team_badges, playerwise=False)
-
-
-
-
-
-        df_shots = df_shots[df_shots["matches"] >= min_games]
-        df_shots = df_shots.drop(columns=["matches"])
-
-        df_shots = add_badges(df_shots, team_badges, playerwise=True)
-        df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
+            df_shots_assists = add_badges(
+                df_shots_assists, team_badges, playerwise=True
+            )
+            df_shots_assists_team = add_badges(
+                df_shots_assists_team, team_badges, playerwise=False
+            )
+        else:
+            df_shots = add_badges(df_shots, team_badges, playerwise=True)
+            df_shots_team = add_badges(df_shots_team, team_badges, playerwise=False)
 
         team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
         if team_wise == "Yes":
             if shot_assistors == "Yes":
-                st.info(f"Table displays per shot assist stats for each **team**", icon="🚨")
+                st.info(
+                    f"Table displays per shot assist stats for each **team**", icon="🚨"
+                )
                 st.markdown(
                     df_shots_assists_team.to_html(escape=False, index=False),
                     unsafe_allow_html=True,
@@ -2493,7 +2508,10 @@ def main():
                 )
         else:
             if shot_assistors == "Yes":
-                st.info(f"Table displays per shot assist stats for each **player**", icon="🚨")
+                st.info(
+                    f"Table displays per shot assist stats for each **player**",
+                    icon="🚨",
+                )
                 st.markdown(
                     df_shots_assists.to_html(escape=False, index=False),
                     unsafe_allow_html=True,
@@ -2504,7 +2522,6 @@ def main():
                     df_shots.to_html(escape=False, index=False, bold_headers=True),
                     unsafe_allow_html=True,
                 )
-
     with tab5:
         st.header("Team Players")
 
