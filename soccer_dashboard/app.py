@@ -511,9 +511,7 @@ def add_badges(df, badges, playerwise=True):
                 if col not in ["img", "assist_player", "team", "Open Play xG"]
             ]
             if "position" in df_badges.columns:
-                columns_order.insert(
-                    3, "position"
-                )  # Insert position column if it exists
+                columns_order.insert(3, "position")  # Insert position column if it exists
         else:
             columns_order = ["img", "player", "position", "Open Play xG"] + [
                 col
@@ -540,17 +538,13 @@ def add_badges(df, badges, playerwise=True):
 
     # Format the badge column
     df_badges["img"] = df_badges["img"].apply(
-        lambda x: (
-            f'<img src="{x}" style="width: 32px; height: 32px;">'
-            if pd.notnull(x)
-            else ""
-        )
+        lambda x: f'<img src="{x}" style="width: 32px; height: 32px;">' if pd.notnull(x) else ""
     )
+
     # Get numerical and categorical columns
     numerical_columns = df_badges.select_dtypes(include="number").columns
     categorical_columns = df_badges.select_dtypes(exclude="number").columns
 
-    # Create a styled df with badges
     # Create a styled df with badges
     styled_df_badges = (
         df_badges.style.set_properties(
@@ -662,12 +656,10 @@ def add_badges(df, badges, playerwise=True):
     if playerwise and "position" in df_badges.columns:
         color_mapping = get_color_mapping(df_badges["position"].unique())
         styled_df_badges = styled_df_badges.applymap(
-            lambda x: f"color: {color_mapping.get(x, 'black')}",
-            subset=["position"],
+            lambda x: f"background-color: {color_mapping[x]}", subset=["position"]
         )
 
     return styled_df_badges
-
 
 @st.cache_data
 def transform_shot_data_assist(df_shots):
@@ -2525,7 +2517,7 @@ def main():
             )
 
             df_shots_assists = add_badges(
-                df_shots_assists, team_badges, playerwise=True
+                df_shots_assists, team_badges, playerwise=False
             )
             df_shots_assists_team = add_badges(
                 df_shots_assists_team, team_badges, playerwise=False
