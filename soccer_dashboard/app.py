@@ -2467,7 +2467,7 @@ def main():
             if shot_assistors == "Yes":
                 st.info(f"Table displays per shot assist stats for each **team**", icon="🚨")
                 st.markdown(
-                    df_shots_assists_team.to_html(escape=False, index=False, bold_headers=True),
+                    df_shots_assists_team.to_html(escape=False, index=False),
                     unsafe_allow_html=True,
                 )
             else:
@@ -2480,7 +2480,7 @@ def main():
             if shot_assistors == "Yes":
                 st.info(f"Table displays per shot assist stats for each **player**", icon="🚨")
                 st.markdown(
-                    df_shots_assists.to_html(escape=False, index=False, bold_headers=True),
+                    df_shots_assists.to_html(escape=False, index=False),
                     unsafe_allow_html=True,
                 )
             else:
