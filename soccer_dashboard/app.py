@@ -488,14 +488,12 @@ def add_badges(df, badges, playerwise=True):
 
     # Determine the order of the columns
     if playerwise:
-        columns_order = ["img", "player", "position", "matches", "Open Play xG"] + [
+        columns_order = ["img", "assist_player", "position", "matches", "Open Play xG"] + [
             col
             for col in df_badges.columns
             if col
-            not in ["img", "player", "position", "team", "matches", "Open Play xG"]
+            not in ["img", "assist_player", "position", "team", "matches", "Open Play xG"]
         ]
-        color_mapping = get_color_mapping(df["position"].unique())
-
     else:
         columns_order = ["img", "team", "Open Play xG"] + [
             col
@@ -525,7 +523,7 @@ def add_badges(df, badges, playerwise=True):
             subset=categorical_columns.difference(["img", "position"]),
             **{
                 "text-align": "left",
-                "font-family": fm_rubik,
+                "font-family": "Arial, sans-serif",
                 "background-color": "#0d0b17",
                 "color": "gainsboro",
                 "border-color": "#ffbd6d",
@@ -535,7 +533,7 @@ def add_badges(df, badges, playerwise=True):
             subset=numerical_columns,
             **{
                 "text-align": "center",
-                "font-family": fm_rubik,
+                "font-family": "Arial, sans-serif",
                 "background-color": "#0d0b17",
                 "color": "gainsboro",
                 "border-color": "#ffbd6d",
@@ -545,7 +543,7 @@ def add_badges(df, badges, playerwise=True):
             subset=["img"],
             **{
                 "text-align": "center",
-                "font-family": fm_rubik,
+                "font-family": "Arial, sans-serif",
                 "background-color": "#0d0b17",
                 "color": "gainsboro",
                 "border-color": "#ffbd6d",
@@ -558,7 +556,7 @@ def add_badges(df, badges, playerwise=True):
             subset=["position"],
             **{
                 "text-align": "center",
-                "font-family": fm_rubik,
+                "font-family": "Arial, sans-serif",
                 "background-color": "#0d0b17",
                 "color": "gainsboro",
                 "border-color": "#ffbd6d",
@@ -571,7 +569,7 @@ def add_badges(df, badges, playerwise=True):
                 {
                     "selector": "th",
                     "props": [
-                        ("font-family", fm_rubik),
+                        ("font-family", "Arial, sans-serif"),
                         ("background-color", "#070d1d"),
                         ("color", "floralwhite"),
                         ("border-color", "#ffbd6d"),
@@ -610,31 +608,18 @@ def add_badges(df, badges, playerwise=True):
         # Highlight the maximum value in each column
         .highlight_max(
             subset=numerical_columns,
-            props=highlight_max_props,
+            props="color: green; font-weight: bold;",
         )
         # Highlight the minimum value in each column
         .highlight_min(
             subset=numerical_columns,
-            props=highlight_min_props,
+            props="color: red; font-weight: bold;",
         )
         .format(subset=numerical_columns, formatter="{:.2f}")
-        # Format numerical columns with text gradient
-        .text_gradient(
-            subset=numerical_columns,
-            cmap="coolwarm",
-        )
-        .hide(axis="index")   
+        .hide(axis="index")
     )
 
-    # if playerwise/position in columns applymap to color the cells
-    if playerwise:
-        styled_df_badges = styled_df_badges.applymap(
-            lambda x: f"background-color: {color_mapping[x]}", subset=["position"]
-        )
-
-
     return styled_df_badges
-
 
 def transform_shots_data(df_shots):
     print(f"Columns_in_df_shots: {list(df_shots.columns)}")
