@@ -811,6 +811,155 @@ def transform_shot_data(df_shots):
     return playerwise_result, teamwise_result
 
 @st.cache_data
+def transform_shot_data_assist(df_shots):
+    # Calculate the total xG, the count of shots, and the count of unique games for each group
+    grouped_data = (
+        df_shots.groupby(
+            ["assist_player", "team", "position", "situation", "body_part", "zone_y", "result"]
+        )
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate matches per assist_player, team, and position
+    matches_data = (
+        df_shots.groupby(["assist_player", "team", "position"])
+        .agg(matches=pd.NamedAgg(column="game", aggfunc="nunique"))
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    grouped_data["per_shot_xg"] = grouped_data["total_xg"] / grouped_data["shot_count"]
+
+    # Pivot the data for situations
+    situation_pivot = grouped_data.pivot_table(
+        index=["assist_player", "team", "position"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    situation_pivot.columns = [f"{col} xG" for col in situation_pivot.columns]
+    situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    body_part_pivot = grouped_data.pivot_table(
+        index=["assist_player", "team", "position"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    body_part_pivot.columns = [f"{col} xG" for col in body_part_pivot.columns]
+    body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    zone_y_pivot = grouped_data.pivot_table(
+        index=["assist_player", "team", "position"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    zone_y_pivot.columns = [f"{col} xG" for col in zone_y_pivot.columns]
+    zone_y_pivot.reset_index(inplace=True)
+
+    # Pivot the data for result
+    result_pivot = grouped_data.pivot_table(
+        index=["assist_player", "team", "position"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    result_pivot.columns = [f"{col} xG" for col in result_pivot.columns]
+    result_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on assist_player, team, and position
+    assistwise_result = situation_pivot.merge(
+        body_part_pivot, on=["assist_player", "team", "position"], how="outer"
+    )
+    assistwise_result = assistwise_result.merge(
+        zone_y_pivot, on=["assist_player", "team", "position"], how="outer"
+    )
+
+    # Merge the result_pivot with assistwise_result
+    assistwise_result = assistwise_result.merge(
+        result_pivot, on=["assist_player", "team", "position"], how="outer"
+    )
+
+    # Add matches to the assistwise_result
+    assistwise_result = assistwise_result.merge(
+        matches_data, on=["assist_player", "team", "position"], how="left"
+    )
+
+    # Calculate teamwise data
+    team_grouped_data = (
+        df_shots.groupby(["team", "situation", "body_part", "zone_y", "result"])
+        .agg(
+            total_xg=pd.NamedAgg(column="xg", aggfunc="sum"),
+            shot_count=pd.NamedAgg(column="xg", aggfunc="count"),
+        )
+        .reset_index()
+    )
+
+    # Calculate the per shot xG
+    team_grouped_data["per_shot_xg"] = (
+        team_grouped_data["total_xg"] / team_grouped_data["shot_count"]
+    )
+
+    # Pivot the data for situations
+    team_situation_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="situation",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_situation_pivot.columns = [f"{col} xG" for col in team_situation_pivot.columns]
+    team_situation_pivot.reset_index(inplace=True)
+
+    # Pivot the data for body parts
+    team_body_part_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="body_part",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_body_part_pivot.columns = [f"{col} xG" for col in team_body_part_pivot.columns]
+    team_body_part_pivot.reset_index(inplace=True)
+
+    # Pivot the data for zone_y
+    team_zone_y_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="zone_y",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_zone_y_pivot.columns = [f"{col} xG" for col in team_zone_y_pivot.columns]
+    team_zone_y_pivot.reset_index(inplace=True)
+
+    # Pivot the data for result
+    team_result_pivot = team_grouped_data.pivot_table(
+        index=["team"],
+        columns="result",
+        values="per_shot_xg",
+        fill_value=0,
+    )
+    team_result_pivot.columns = [f"{col} xG" for col in team_result_pivot.columns]
+    team_result_pivot.reset_index(inplace=True)
+
+    # Merge the pivot tables on team
+    teamwise_result = team_situation_pivot.merge(
+        team_body_part_pivot, on="team", how="outer"
+    )
+    teamwise_result = teamwise_result.merge(team_zone_y_pivot, on="team", how="outer")
+
+    # Merge the result_pivot with teamwise_result
+    teamwise_result = teamwise_result.merge(team_result_pivot, on="team", how="outer")
+
+    return assistwise_result, teamwise_result
+
+
+@st.cache_data
 # plot home v away goals for all teams data using hexbin plot
 def plot_home_away_goals(df):
     # Size of the hexbins
@@ -2291,6 +2440,13 @@ def main():
 
         df_shots, df_shots_team = transform_shot_data(df_shots)
 
+        # Create a toggle for instead getting shot creators ie shot assistors
+        shot_assistors = st.radio("Show shot assistors", ["No", "Yes"], key="shot_assistors")
+
+        if shot_assistors == "Yes":
+            # Call the function to get shot assistors
+            df_shots_assists, df_shots_assists_team = transform_shot_data_assist(df_shots, df_shots_team)
+
         default_matches_value = int(0.3 * max(df_shots["matches"]))
 
         min_games = st.number_input(
@@ -2306,17 +2462,31 @@ def main():
         team_wise = st.radio("Show team-wise stats", ["No", "Yes"], key="team_wise")
 
         if team_wise == "Yes":
-            st.info(f"Table displays per shot stats for each team", icon="🚨")
-            st.markdown(
-                df_shots_team.to_html(escape=False, index=False, bold_headers=True),
-                unsafe_allow_html=True,
-            )
+            if shot_assistors == "Yes":
+                st.info(f"Table displays per shot assist stats for each **team**", icon="🚨")
+                st.markdown(
+                    df_shots_assists_team.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info(f"Table displays per shot stats for each team", icon="🚨")
+                st.markdown(
+                    df_shots_team.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True,
+                )
         else:
-            st.info(f"Table displays per shot stats for each **player**", icon="🚨")
-            st.markdown(
-                df_shots.to_html(escape=False, index=False, bold_headers=True),
-                unsafe_allow_html=True,
-            )
+            if shot_assistors == "Yes":
+                st.info(f"Table displays per shot assist stats for each **player**", icon="🚨")
+                st.markdown(
+                    df_shots_assists.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info(f"Table displays per shot stats for each **player**", icon="🚨")
+                st.markdown(
+                    df_shots.to_html(escape=False, index=False, bold_headers=True),
+                    unsafe_allow_html=True,
+                )
 
     with tab5:
         st.header("Team Players")
